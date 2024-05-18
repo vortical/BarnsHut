@@ -1,0 +1,24 @@
+{
+  "name": "barnshut",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite  --host 0.0.0.0 --debug --cors true",
+    "prod": "vite --host 0.0.0.0 --port 5171 --cors true",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/three": "^0.160.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0",
+    "vitest": "^1.2.1"    
+  },
+  "dependencies": {
+    "lz-string": "^1.5.0",
+    "lil-gui": "^0.19.1",
+    "three": "^0.160.0"
+  }  
+}
