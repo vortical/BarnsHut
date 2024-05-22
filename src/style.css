@@ -1,96 +1,311 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
+html, body {
+  /* remove margins and scroll bars */
   margin: 0;
+  background-color: #0A0E20;
+  height: 100%;
+  overflow: hidden;
+}
+
+.selectedSystemLabel {
+  text-shadow: 1px 1px 3px black, 0 0 1em black, 0 0 0.2em black;
+  color: #f89406;
+  font-family: sans-serif;
+  padding: 2px;
+  background: rgba( 0, 0, 0, .6 );  text-align: right;
+}
+
+.selectedSystemLabel.info {
+  font-size:smaller;
+}
+
+.label {
+  text-shadow: 1px 1px 3px black, 0 0 1em black, 0 0 0.2em black;
+  color: #979797;
+  font-family: sans-serif;
+  padding: 2px;
+  background: rgba( 0, 0, 0, .6 );
+  text-align: right;
+}
+
+.label.info {
+  font-size: smaller;
+}
+
+#scene-container {
+ /* tell our scene container to take up the full page */
+ width: 100%;
+ height: 100%;
+ display: block;
+ position: relative;
+
+/*
+  Set the container's background color to the same as the scene's
+  background to prevent flashing on load
+*/
+background-color: #0A0E20;   
+
+}
+
+.lil-gui {
+  --name-width: 35%;
+}
+
+
+#system-time {
+  left:0;
+
+  opacity: 0.3;
+  color: white; 
+  border-width: 0;           /* Set text color to black */
+  background-color:rgb(51, 50, 48)   /* Set background color to gray */
+}
+
+
+#status {
+  right:0;
+
+  opacity: 0.3;
+  color: white; 
+  border-width: 0;           /* Set text color to black */
+  background-color:rgb(51, 50, 48)   /* Set background color to gray */
+}
+
+
+
+.bottom-container {
+
+  opacity: 0.5;
+  background-color: #1fe0;  /* fully transparent */  
+}
+
+.bottom-container.positioning {
+  width: 100%;
+  max-height: 40%;
+  position: fixed;
+  bottom: 0;
+  left: 0px;
+  z-index: 1000;
+}
+
+
+.blink {
+  animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.clock-control-item {
+  padding: 10px 10px;
+  font-size: 16px;
+  flex: 2;
+  border: solid #007BFF;
+  border-radius: 4px;
+  color: #FFFFFF;
+  max-width: fit-content;
+
+}
+
+.clock-control-item:nth-of-type(2) {
+
+  flex: 1;
+  
+  
+
+}
+
+
+#clock > input[type='text'] { 
+  font-size: 16px; 
+  font-family: sans-serif; 
+  border: 0;
+  
+  color: white; 
+  background-color: #1fe0
+
+}
+
+.status-bar {
   display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  justify-content: left;
+  align-items:center;
+  gap: 12px; 
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.status-item {
+  padding: 10px 20px;
+  font-size: 16px;
+  min-width: 20%;
+  min-height: 1.5em; 
+  border: none;
+  background-color: #1fe0;
+  color: #FFFFFF;
 }
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px; 
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vanilla:hover {
-  filter: drop-shadow(0 0 2em #3178c6aa);
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+.control-button {
+  padding: 10px 20px;
+  font-size: 16px;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  border: none;
+  border-radius: 4px;
+  background-color: #007BFF;
+  color: #FFFFFF;
+  transition: background-color 0.3s ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.control-button:hover {
+  background-color: #0056b3;
+}
+
+.control-button:active {
+  background-color: #004099; /* Darker color when button is pressed */
+}
+
+.notice {
+  cursor: pointer;
+  box-sizing: border-box;
+  display: none;
+  width: 100%;
+  max-width: 440px;
+  border-top-right-radius: 5px;
+  border-top-left-radius: 5px;
+  background: #eeeeee;
+  box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.02), 0 6.7px 5.3px rgba(0, 0, 0, 0.028), 0 12.5px 10px rgba(0, 0, 0, 0.035), 0 22.3px 17.9px rgba(0, 0, 0, 0.042), 0 41.8px 33.4px rgba(0, 0, 0, 0.05), 0 100px 80px rgba(0, 0, 0, 0.07);
+  transition: 0.2s ease-in;
+  
+}
+@media (min-width:640px) {
+  .notice {
+    border-radius: 5px;
+    margin-bottom: 0.5em;
   }
-  a:hover {
-    color: #747bff;
+}
+.notice--active {
+  display: flex;
+  animation: slidein--bottom 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+.notice-type-warn {
+  background: #f89406;
+  color: white;
+}
+.notice-type-success {
+  background: #51A351;
+  color: white;
+}
+.notice-type-error {
+  background: #bd362f;
+  color: white;
+}
+.notice__actions {
+  width: 100%;
+  max-width: 768px;
+  margin: 0 auto;
+  display: flex;
+  flex-flow: column;
+}
+@media (min-width:640px) {
+  .notice__actions {
+    flex-flow: row;
   }
-  button {
-    background-color: #f9f9f9;
+}
+.notice-container {
+  box-sizing: border-box;
+  padding: 0em 1em;
+  position: fixed;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  flex-flow: column;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+@media (min-width:640px) {
+  .notice-container {
+    padding: 0 1em;
   }
+}
+@media (min-width:1024px) {
+  .notice-container {
+    left: initial;
+    right: 0;
+  }
+}
+.notice-icon {
+  height: 60px;
+  width: 60px;
+  box-sizing: border-box;
+  padding: 1em;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.notice-icon svg {
+  height: 100%;
+}
+@media (min-width:640px) {
+  .notice-icon {
+    display: flex;
+  }
+}
+.notice-icon ~ .notice-content {
+  padding: 1em;
+}
+@media (min-width:640px) {
+  .notice-icon ~ .notice-content {
+    padding: 1em 1em 1em 0;
+  }
+}
+.notice-content {
+  box-sizing: border-box;
+  padding: 1em;
+}
+.notice-content h2 {
+  margin: 0 0 0.25em 0;
+  padding: 0;
+  font-size: 1.2em;
+}
+.notice-content p {
+  margin: 0;
+  padding: 0;
+  font-size: 1em;
+}
+
+@keyframes slidein--bottom {
+  0% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+div.demo div {
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+div.demo div button {
+  width: 120px;
+  height: 40px;
+  background-color: #eeffee;
 }
