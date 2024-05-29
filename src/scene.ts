@@ -1,12 +1,15 @@
 import { AmbientLight, AxesHelper, BoxGeometry, BufferAttribute, BufferGeometry, Camera, Color, DirectionalLightHelper, Float32BufferAttribute, MathUtils, Mesh, MeshBasicMaterial, Object3D, PCFShadowMap, PerspectiveCamera, Points, PointsMaterial, Scene, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Dim } from './geometry';
+import { Dim, V3 } from './geometry';
+import { Body } from './Body';
 import { Clock } from './Clock';
-import { CompositeUpdater, SceneUpdater } from './SceneUpdater';
+
 import { throttle } from './throttle';
+import { NBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
+import { ArcballControls } from 'three/examples/jsm/Addons.js';
 
 
-type Vec = [number, number, number];
+
 
 export type BodySystemEvent<T> = {
     topic: string;
@@ -14,11 +17,11 @@ export type BodySystemEvent<T> = {
 };
 
 const CAMERA_NEAR = 1;
-const CAMERA_FAR = 400;
+const CAMERA_FAR = 400000;
 
 
 const defaultSceneProperties: Required<SceneOptionsState> = {
-    fov: 1.5,
+    fov: 35.5,
     ambientLightLevel: 0.5,
     date: Date.now(),
 };
@@ -38,15 +41,17 @@ export class BodyScene {
     camera: PerspectiveCamera;
     scene: Scene;
     renderer: WebGLRenderer;
-    controls: OrbitControls;
+    controls: ArcballControls;
     ambiantLight: AmbientLight;
     parentElement: HTMLElement;
     size!: Dim;
     clock: Clock;
-    sceneUpdaters: CompositeUpdater = new CompositeUpdater();
-    objects3D: Object3D[];
+    sceneUpdater: NBodyOctreeSystemUpdater;
+    particles: Points;
+    bodies: Body[]
+    
 
-    constructor(parentElement: HTMLElement, sceneUpdater: SceneUpdater, stateOptions:SceneOptionsState){
+    constructor(parentElement: HTMLElement, sceneUpdater: NBodyOctreeSystemUpdater, stateOptions:SceneOptionsState){
 
         const options  = { ...defaultSceneProperties, ...stateOptions };        
         const canvasSize = new Dim(parentElement.clientWidth, parentElement.clientHeight);
@@ -54,7 +59,7 @@ export class BodyScene {
         this.camera = createCamera();
         this.scene = createScene();
         this.renderer = createRenderer();
-        this.sceneUpdaters.addUpdater(sceneUpdater);
+        this.sceneUpdater = sceneUpdater
         
         this.clock = new Clock(options.date);
         // document.body.appendChild(this.renderer.domElement);
@@ -64,17 +69,18 @@ export class BodyScene {
         this.ambiantLight = createAmbiantLight(options.ambientLightLevel);
         this.scene.add(this.ambiantLight);
         this.scene.background = new Color( 0x0a0a0a );
-        this.objects3D = this.createObjects3D();
-        this.scene.add(...this.objects3D);
+        [this.particles, this.bodies] = createParticles();
+
+        this.scene.add(this.particles);
         this.controls.update();
         this.setFOV(options.fov);
         this.setSize(canvasSize);
         
-        this.setViewPosition([0, 0 , 2750], [0,0,0])
+        this.setViewPosition([0, 0 , 27500], [0,0,0])
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
     }
 
-    setViewPosition(cameraPosition: Vec, target: Vec) {
+    setViewPosition(cameraPosition: V3, target: V3) {
 
         this.controls.target.set(target[0], target[1], target[2]);
         this.camera.position.set(cameraPosition[0], cameraPosition[1], cameraPosition[2]);
@@ -159,7 +165,9 @@ export class BodyScene {
      */
     tick(deltaTime: number) {
         return new Promise((resolve) => {
-            this.sceneUpdaters.update(this.objects3D, deltaTime, this.clock);
+            const positionAttributeBuffer = this.particles.geometry.attributes.position;
+            this.sceneUpdater.update(positionAttributeBuffer.array, this.bodies, deltaTime);
+            positionAttributeBuffer.needsUpdate = true;
             resolve(null);
         });
     }
@@ -174,50 +182,79 @@ export class BodyScene {
      * @param bodies 
      * @returns Map<string, BodyObject3D> 
      */
-    createObjects3D(): Object3D[] {
 
-
-        const vertices = [];
-
-        for ( let i = 0; i < 10000; i ++ ) {
-            const x = MathUtils.randFloatSpread( 2000 );
-            const y = MathUtils.randFloatSpread( 2000 );
-            const z = MathUtils.randFloatSpread( 2000 );
-
-            vertices.push( x, y, z );
-        }
-
-        const geometry = new BufferGeometry();
-        geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
-        const material = new PointsMaterial( { size: 15, color: 0xff0000 } );
-        const points = new Points( geometry, material );
-
-        const mesh = new Mesh( new BoxGeometry( 500, 500, 500 ), new MeshBasicMaterial( { color: 0xffffff, transparent: false } ) );
-    
-
-
-
-        
-        return [mesh, points];
-    }
-// scene.add( points );
-        // function render(time) {
-        //     particles.forEach(p => {
-        //        p.velocity.add(p.acceleration)
-        //        p.position.add(p.velocity)
-        //     })
-        //     mesh.geometry.verticesNeedUpdate = true
-        //     renderer.render( scene, camera );
-        //  }
-
-
-
-
-
-        // return [];
-
-    // }
 }
+
+function createParticles(): [Points, Body[]] {
+    const vertices = [];
+
+    const bodies = [];
+
+
+    for ( let i = 0; i < 2000; i ++ ) {
+        const x = MathUtils.randFloatSpread(2000);
+        const y =MathUtils.randFloatSpread(2000);
+        const z = MathUtils.randFloatSpread(2000);
+        vertices.push( x, y, z );
+
+        bodies.push(new Body(1000000000000, 1, [x, y, z], 
+            [MathUtils.randFloatSpread( 0.005 ), 
+                MathUtils.randFloatSpread( 0.005 ),
+                MathUtils.randFloatSpread( 0.005 )]));      }
+
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
+    const material = new PointsMaterial( { size: 50, color: 0xff0000 } );
+    const points = new Points( geometry, material );
+
+    return [points, bodies];
+}
+
+
+// function acreateParticles(): [Points, Body[]] {
+//     const v = { x: -573.8733329927818, y: -781.9533749710408, z: -409.1276938730193 };
+//     const d = { x: -307304783.7767792, y: 181536068.80307007, z: 105563387.89339447 };
+
+//     const moon = new Body(
+//         7.342e22,
+//         1737400, 
+//         [d.x, d.y, d.z],
+//         [v.x, v.y, v.z]
+        
+//     )
+//     const earth = new Body(
+//         5.972168e24,
+//         6371000, 
+//         [0,0,0],
+//         [0,0,0]
+        
+//     )
+
+
+
+
+//     const vertices = [];
+
+//     const bodies = [];
+
+
+
+//     vertices.push( earth.position[0], earth.position[1], earth.position[2] );
+//     vertices.push( moon.position[0], moon.position[1], moon.position[2] );
+
+//     bodies.push(earth);
+//     bodies.push(moon);
+
+
+//     const geometry = new BufferGeometry();
+//     geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
+//     const material = new PointsMaterial( { size: 5000000, color: 0xff0000 } );
+//     const points = new Points( geometry, material );
+
+//     return [points, bodies];
+
+    
+// }
 
 
 function createAmbiantLight(intensity: number) {
@@ -252,8 +289,10 @@ function createRenderer(): WebGLRenderer {
 }
 
 
-function createControls(camera: Camera, domElement: HTMLElement): OrbitControls {
-    const controls = new OrbitControls(camera, domElement);
-    controls.enableDamping = true;
+function createControls(camera: Camera, domElement: HTMLElement): ArcballControls {
+    // const controls = new OrbitControls(camera, domElement);
+    const controls = new ArcballControls(camera, domElement);
+
+    // controls.enableDamping = true;
     return controls;
 }

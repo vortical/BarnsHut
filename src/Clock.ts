@@ -35,10 +35,10 @@ export class Clock {
     savedScale: number = 1;
     timers = new Map<string, Timer>();
 
-    /**
-     * references the pub/sub publisher once started, else indefined
-     */
-    timePublisherId: any = undefined;
+    // /**
+    //  * references the pub/sub publisher once started, else indefined
+    //  */
+    // timePublisherId: any = undefined;
 
 
 
@@ -52,11 +52,6 @@ export class Clock {
     }
 
     setPaused(value: boolean): boolean {
-        // When we pause,save the scale's 'unpaused' value and set scale to 0, 
-        // To unpause, we assign the saved value to the scale.
-        //
-        // TODO: Clean this up by creating 2 'state classes': 
-        // class PausedClockState and NonPausedClockState to handle the pause and setScale methods.
         if (value) {
             if (!this.isPaused()) {
                 this.savedScale = this.scale;
