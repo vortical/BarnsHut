@@ -4,8 +4,6 @@ import { V3, magnitude, substract } from "./geometry";
 export interface PositionedMass {
     mass: number;
     position: V3;
-
-
 };
 
 export class Body implements PositionedMass {
@@ -135,6 +133,9 @@ export function twoBodyForce(body1: PositionedMass, body2: PositionedMass): V3 {
 }
 
 export function force(r: V3, magnitude: number, m1: number, m2: number): V3 {
+    if( magnitude < 1){
+        console.log("mag"+magnitude);
+    }
     const numerator = G * m1 * m2;
     const denominator = magnitude * magnitude * magnitude;//, 3);
     return [        

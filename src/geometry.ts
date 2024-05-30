@@ -78,3 +78,43 @@ export function centerOfMass(bodies: Set<PositionedMass> | PositionedMass[]): Po
   
   } 
   
+
+
+
+
+export class Box {
+
+  min: V3;
+  max: V3;
+
+  median: V3;
+  dimensions: V3;
+  maxDimension: number;
+
+  constructor(min:V3, max:V3){
+      this.min = min;
+      this.max = max;
+      this.median = [
+          (min[0] + max[0])/2.0,
+          (min[1] + max[1])/2.0,
+          (min[2] +  max[2])/2.0
+      ];
+
+      this.dimensions = abs(substract(max, min));
+      this.maxDimension = Math.max(...this.dimensions);
+
+  }
+  
+  contains(position: V3){
+      const min = this.min;
+      // max boundary is excluded
+      const max = this.max;
+      
+      return min[0] <= position[0]  && position[0] < max[0] &&
+              min[1] <= position[1]  && position[1] < max[1] &&
+              min[2] <= position[2]  && position[2] < max[2];  
+
+  }
+
+
+}

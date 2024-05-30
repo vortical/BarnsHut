@@ -16,8 +16,8 @@ export type BodySystemEvent<T> = {
     message: T;
 };
 
-const CAMERA_NEAR = 1;
-const CAMERA_FAR = 400000;
+const CAMERA_NEAR = 10;
+const CAMERA_FAR = 500000000;
 
 
 const defaultSceneProperties: Required<SceneOptionsState> = {
@@ -76,7 +76,7 @@ export class BodyScene {
         this.setFOV(options.fov);
         this.setSize(canvasSize);
         
-        this.setViewPosition([0, 0 , 27500], [0,0,0])
+        this.setViewPosition([0, 0 , 1000000], [0,0,0])
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
     }
 
@@ -131,6 +131,7 @@ export class BodyScene {
         this.renderer.setAnimationLoop(async () => {
             const delta = timer.getDelta()!;
             await this.tick(delta);            
+            // this.tick(delta);            
             this.controls.update();
             this.render();
         });
@@ -191,20 +192,25 @@ function createParticles(): [Points, Body[]] {
     const bodies = [];
 
 
-    for ( let i = 0; i < 2000; i ++ ) {
-        const x = MathUtils.randFloatSpread(2000);
-        const y =MathUtils.randFloatSpread(2000);
-        const z = MathUtils.randFloatSpread(2000);
+    for ( let i = 0; i < 4; i ++ ) {
+    // for ( let i = 0; i < 2; i ++ ) {
+        const x = MathUtils.randFloatSpread(2000000);
+        const y =MathUtils.randFloatSpread(2000000);
+        const z = MathUtils.randFloatSpread(2000000);
         vertices.push( x, y, z );
 
-        bodies.push(new Body(1000000000000, 1, [x, y, z], 
-            [MathUtils.randFloatSpread( 0.005 ), 
-                MathUtils.randFloatSpread( 0.005 ),
-                MathUtils.randFloatSpread( 0.005 )]));      }
+        // bodies.push(new Body(1e16, 10000, [x, y, z], 
+        bodies.push(new Body(1e20, 10000, [x, y, z], 
+            [MathUtils.randFloatSpread( 1000.5 ), 
+                MathUtils.randFloatSpread( 1000.5 ),
+                MathUtils.randFloatSpread( 1000.5 )]));      }
+            // [MathUtils.randFloatSpread( 10.5 ), 
+            //     MathUtils.randFloatSpread( 10.5 ),
+            //     MathUtils.randFloatSpread( 10.5 )]));      }
 
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
-    const material = new PointsMaterial( { size: 50, color: 0xff0000 } );
+    const material = new PointsMaterial( { size: 50000, color: 0xff0000 } );
     const points = new Points( geometry, material );
 
     return [points, bodies];
