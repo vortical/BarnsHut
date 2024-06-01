@@ -7,7 +7,8 @@ import { PositionedMass } from "./Body.ts";
 import { Octree, OctreeLeaf, boxOf, octreeOf } from "./octree.ts";
 
 const DIM = 15.0e12; // meters
-const SD_MAX_RATIO = 0.75;
+const SD_MAX_RATIO = 1.00;
+// const SD_MAX_RATIO = 0.1;
 const stats = {
     leaf:0,
     composite:0,
@@ -19,30 +20,30 @@ const stats = {
 function updateBodies( bodies: Body[], octree: Octree, time: number){
 
     const buf: V3 = [0,0,0];
-    function accelerate(acceleratedObject: Body, ot: Octree, depth: number=1){
+    function accelerate(acceleratedObject: Body, tree: Octree, depth: number=1){
 
-        if (ot.children == undefined){// : slow: instanceof OctreeLeaf){
+        if (tree.children == undefined){// : slow: instanceof OctreeLeaf){
             stats.leaf += 1;
             
-            for (const b of (ot as OctreeLeaf).bodies){
+            for (const b of tree.bodies){
                 if (acceleratedObject !== b){
                     acceleratedObject.addForceFromBody(b);
                 }
             }
             
         }else { 
-            const s = ot.box.maxDimension;
-            const com = ot.centerOfMass();
+            const s = tree.box.maxDimension;
+            const com = tree.centerOfMass;
             const r =  substract(com.position, acceleratedObject.position, buf);
             const d = magnitude(r);
 
-            if (s / d < SD_MAX_RATIO || octree.count() == 1) {
+            if (s / d < SD_MAX_RATIO || tree.count == 1) { // wont enconter tree.count == 1....take out
                 stats.composite += 1;
                 acceleratedObject.addForce(force(r, d, com.mass, acceleratedObject.mass));
         
             }else {   
                 stats.miss += 1; 
-                for(const child of ot.children!){
+                for(const child of tree.children!){
                     accelerate(acceleratedObject, child, depth+1);        
                 }
             } 
@@ -51,19 +52,35 @@ function updateBodies( bodies: Body[], octree: Octree, time: number){
     }
 
 
-    for(const b of bodies) {
-        
-        b.acceleration = [0,0,0]
-        accelerate(b, octree);
-        b.updatePosition(time);
-    }
-    // accelerate again then average out before updating the velocity
-    for(const b of bodies) {
-        accelerate(b, octree);
-        b.acceleration = divideScalar(b.acceleration!, 2.0);
-        b.updateVelocity(time);
+    function velocityAtAverageAcceleration(){
+        for(const b of bodies) {
+            
+            b.acceleration = [0,0,0]
+            accelerate(b, octree);
+            b.updatePosition(time);
+        }
+        // accelerate again then average out before updating the velocity
+        for(const b of bodies) {
+            accelerate(b, octree);
+            b.acceleration = divideScalar(b.acceleration!, 2.0);
+            b.updateVelocity(time);
+    
+        }
 
     }
+
+    function xxx(){
+        for(const b of bodies) {
+            b.acceleration = [0,0,0]
+            accelerate(b, octree);
+            b.updatePosition(time);
+            b.updateVelocity(time);
+        }
+    }
+
+    // todo: enable switching between the 2 approaches.
+    // velocityAtAverageAcceleration();
+    xxx();
 }
 
 
@@ -77,7 +94,7 @@ export class NBodyOctreeSystemUpdater {
         const octree = octreeOf(bodies, boxOf(bodies));
 
         
-        console.log("d "+ octree.depth());
+        console.log("d "+ octree.depth);
         console.log("o time"+ (performance.now() - t0).toFixed(0));
         const t1 = performance.now();
         
@@ -85,15 +102,16 @@ export class NBodyOctreeSystemUpdater {
         const t2 = performance.now() - t1;
         
         console.log("b time"+ t2.toFixed(0));
+        
 
-        bodies.forEach((body, i) => {
-            const position = body.position;
+        for(let i = 0, length = bodies.length; i < length; i++){
+            const position = bodies[i].position;
+            const particleIndex = i * 3;
+            particlePositions[particleIndex] = position[0]; 
+            particlePositions[particleIndex + 1] = position[1]; 
+            particlePositions[particleIndex + 2] = position[2]; 
 
-            particlePositions[i*3] = position[0]; 
-            particlePositions[i*3 + 1] = position[1]; 
-            particlePositions[i*3 + 2] = position[2]; 
-
-        })
+        }
        
     }
 

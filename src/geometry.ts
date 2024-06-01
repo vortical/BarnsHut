@@ -91,7 +91,7 @@ export class Box {
   dimensions: V3;
   maxDimension: number;
 
-  constructor(min:V3, max:V3){
+  constructor(min:V3=[0,0,0], max:V3=[0,0,0]){
       this.min = min;
       this.max = max;
       this.median = [

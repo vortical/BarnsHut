@@ -4,6 +4,7 @@ import { V3, magnitude, substract } from "./geometry";
 export interface PositionedMass {
     mass: number;
     position: V3;
+    radius?: number;
 };
 
 export class Body implements PositionedMass {

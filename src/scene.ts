@@ -1,4 +1,4 @@
-import { AmbientLight, AxesHelper, BoxGeometry, BufferAttribute, BufferGeometry, Camera, Color, DirectionalLightHelper, Float32BufferAttribute, MathUtils, Mesh, MeshBasicMaterial, Object3D, PCFShadowMap, PerspectiveCamera, Points, PointsMaterial, Scene, Vector3, WebGLRenderer } from 'three';
+import { AdditiveBlending, AmbientLight, AxesHelper, BoxGeometry, BufferAttribute, BufferGeometry, Camera, Color, DirectionalLightHelper, Float32BufferAttribute, Fog, FogExp2, MathUtils, Mesh, MeshBasicMaterial, Object3D, PCFShadowMap, PerspectiveCamera, Points, PointsMaterial, SRGBColorSpace, Scene, TextureLoader, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Dim, V3 } from './geometry';
 import { Body } from './Body';
@@ -11,13 +11,8 @@ import { ArcballControls } from 'three/examples/jsm/Addons.js';
 
 
 
-export type BodySystemEvent<T> = {
-    topic: string;
-    message: T;
-};
-
-const CAMERA_NEAR = 10;
-const CAMERA_FAR = 500000000;
+const CAMERA_NEAR = 500;
+const CAMERA_FAR = 500000000000;
 
 
 const defaultSceneProperties: Required<SceneOptionsState> = {
@@ -62,12 +57,12 @@ export class BodyScene {
         this.sceneUpdater = sceneUpdater
         
         this.clock = new Clock(options.date);
-        // document.body.appendChild(this.renderer.domElement);
+    
         parentElement.appendChild(this.renderer.domElement);
         this.controls = createControls(this.camera, this.renderer.domElement);
         this.controls.enabled = false;
-        this.ambiantLight = createAmbiantLight(options.ambientLightLevel);
-        this.scene.add(this.ambiantLight);
+    //    this.ambiantLight = createAmbiantLight(options.ambientLightLevel);
+        // this.scene.add(this.ambiantLight);
         this.scene.background = new Color( 0x0a0a0a );
         [this.particles, this.bodies] = createParticles();
 
@@ -76,7 +71,7 @@ export class BodyScene {
         this.setFOV(options.fov);
         this.setSize(canvasSize);
         
-        this.setViewPosition([0, 0 , 1000000], [0,0,0])
+        this.setViewPosition([0, 0 , 10000000], [0,0,0])
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
     }
 
@@ -89,13 +84,13 @@ export class BodyScene {
     setCameraUp(v = new Vector3(0, 1, 0)) {
         this.camera.up.set(v.x, v.y, v.z);
     }
-    getAmbiantLightLevel(): number {
-        return this.ambiantLight.intensity;
-    }
+    // getAmbiantLightLevel(): number {
+    //     return this.ambiantLight.intensity;
+    // }
 
-    setAmbiantLightLevel(level: number) {
-        this.ambiantLight.intensity = level;
-    }
+    // setAmbiantLightLevel(level: number) {
+    //     this.ambiantLight.intensity = level;
+    // }
 
     getFov(): number {
         return this.camera.getEffectiveFOV();
@@ -190,9 +185,11 @@ function createParticles(): [Points, Body[]] {
     const vertices = [];
 
     const bodies = [];
+    const textureLoader = new TextureLoader();
 
+   
 
-    for ( let i = 0; i < 4; i ++ ) {
+    for ( let i = 0; i < 4000; i ++ ) {
     // for ( let i = 0; i < 2; i ++ ) {
         const x = MathUtils.randFloatSpread(2000000);
         const y =MathUtils.randFloatSpread(2000000);
@@ -208,59 +205,67 @@ function createParticles(): [Points, Body[]] {
             //     MathUtils.randFloatSpread( 10.5 ),
             //     MathUtils.randFloatSpread( 10.5 )]));      }
 
+   
+    const circle = textureLoader.load( '/public/assets/disc.png', texture => texture.colorSpace = SRGBColorSpace );
+
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
-    const material = new PointsMaterial( { size: 50000, color: 0xff0000 } );
+
+    const material = new PointsMaterial( { size: 50000, sizeAttenuation: true, map: circle,  alphaTest: 0.5,transparent: true  } );
+    material.color.setHSL( 0.55, 0.8, 0.5, SRGBColorSpace );
     const points = new Points( geometry, material );
 
     return [points, bodies];
 }
 
 
-// function acreateParticles(): [Points, Body[]] {
-//     const v = { x: -573.8733329927818, y: -781.9533749710408, z: -409.1276938730193 };
-//     const d = { x: -307304783.7767792, y: 181536068.80307007, z: 105563387.89339447 };
+function acreateParticles(): [Points, Body[]] {
 
-//     const moon = new Body(
-//         7.342e22,
-//         1737400, 
-//         [d.x, d.y, d.z],
-//         [v.x, v.y, v.z]
+    const v = { x: -573.8733329927818, y: -781.9533749710408, z: -409.1276938730193 };
+    const d = { x: -307304783.7767792, y: 181536068.80307007, z: 105563387.89339447 };
+
+    const moon = new Body(
+        7.342e22,
+        1737400, 
+        [d.x, d.y, d.z],
+        [v.x, v.y, v.z]
         
-//     )
-//     const earth = new Body(
-//         5.972168e24,
-//         6371000, 
-//         [0,0,0],
-//         [0,0,0]
+    )
+    const earth = new Body(
+        5.972168e24,
+        6371000, 
+        [0,0,0],
+        [0,0,0]
         
-//     )
+    )
 
 
 
 
-//     const vertices = [];
+    const vertices = [];
 
-//     const bodies = [];
-
-
-
-//     vertices.push( earth.position[0], earth.position[1], earth.position[2] );
-//     vertices.push( moon.position[0], moon.position[1], moon.position[2] );
-
-//     bodies.push(earth);
-//     bodies.push(moon);
+    const bodies = [];
 
 
-//     const geometry = new BufferGeometry();
-//     geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
-//     const material = new PointsMaterial( { size: 5000000, color: 0xff0000 } );
-//     const points = new Points( geometry, material );
 
-//     return [points, bodies];
+    vertices.push( earth.position[0], earth.position[1], earth.position[2] );
+    vertices.push( moon.position[0], moon.position[1], moon.position[2] );
+
+    bodies.push(earth);
+    bodies.push(moon);
+
+    const textureLoader = new TextureLoader();
+
+    const circle = textureLoader.load( '/public/assets/disc.png' );
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
+    const material = new PointsMaterial( { size: 5000000, color: 0xff0000, map: circle } );
+    const points = new Points( geometry, material );
+
+    return [points, bodies];
 
     
-// }
+}
 
 
 function createAmbiantLight(intensity: number) {
@@ -279,6 +284,9 @@ function setupResizeHandlers(container: HTMLElement, sizeObserver: (size: Dim) =
 
 function createScene(): Scene {
     const scene = new Scene();
+                                  // 5000000000
+    // scene.fog = new Fog( 0x000000, 1, 25000000 );
+    scene.fog = new FogExp2( 0x000000, 0.000000075 );
     scene.background = new Color('black');
     return scene;
 }
