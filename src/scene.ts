@@ -1,38 +1,30 @@
-import { AmbientLight, AxesHelper, BoxGeometry, BufferAttribute, BufferGeometry, Camera, Color, DirectionalLightHelper, Float32BufferAttribute, MathUtils, Mesh, MeshBasicMaterial, Object3D, PCFShadowMap, PerspectiveCamera, Points, PointsMaterial, Scene, Vector3, WebGLRenderer } from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Camera, Color, Fog, FogExp2, MathUtils,PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
+import Stats from 'three/addons/libs/stats.module.js';
+import { ArcballControls } from 'three/examples/jsm/Addons.js';
+
 import { Dim, V3 } from './geometry';
 import { Body } from './Body';
 import { Clock } from './Clock';
-
 import { throttle } from './throttle';
 import { NBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
-import { ArcballControls } from 'three/examples/jsm/Addons.js';
+import { ParticleGraphics } from './ParticleGraphics';
 
-
-
-
-export type BodySystemEvent<T> = {
-    topic: string;
-    message: T;
-};
-
-const CAMERA_NEAR = 1;
-const CAMERA_FAR = 400000;
-
+const CAMERA_NEAR = 500;
+const CAMERA_FAR = 500000000000;
 
 const defaultSceneProperties: Required<SceneOptionsState> = {
     fov: 35.5,
-    ambientLightLevel: 0.5,
+    colorHue: 0.5,
     date: Date.now(),
+    nbParticles: 500
 };
-
 
 export type SceneOptionsState = {
     fov?: number;
-    ambientLightLevel?: number;
+    colorHue?: number;
     date?: number;
+    nbParticles?: number;
 };
-
 
 /**
  * Our main facade class
@@ -42,17 +34,15 @@ export class BodyScene {
     scene: Scene;
     renderer: WebGLRenderer;
     controls: ArcballControls;
-    ambiantLight: AmbientLight;
     parentElement: HTMLElement;
     size!: Dim;
     clock: Clock;
     sceneUpdater: NBodyOctreeSystemUpdater;
-    particles: Points;
-    bodies: Body[]
+    particleGraphics: ParticleGraphics;
+    bodies: Body[];
+    stats: Stats;
     
-
     constructor(parentElement: HTMLElement, sceneUpdater: NBodyOctreeSystemUpdater, stateOptions:SceneOptionsState){
-
         const options  = { ...defaultSceneProperties, ...stateOptions };        
         const canvasSize = new Dim(parentElement.clientWidth, parentElement.clientHeight);
         this.parentElement = parentElement;
@@ -60,28 +50,24 @@ export class BodyScene {
         this.scene = createScene();
         this.renderer = createRenderer();
         this.sceneUpdater = sceneUpdater
-        
         this.clock = new Clock(options.date);
-        // document.body.appendChild(this.renderer.domElement);
+        this.stats = new Stats();
+        parentElement.appendChild(this.stats.dom);
         parentElement.appendChild(this.renderer.domElement);
         this.controls = createControls(this.camera, this.renderer.domElement);
         this.controls.enabled = false;
-        this.ambiantLight = createAmbiantLight(options.ambientLightLevel);
-        this.scene.add(this.ambiantLight);
         this.scene.background = new Color( 0x0a0a0a );
-        [this.particles, this.bodies] = createParticles();
-
-        this.scene.add(this.particles);
+        this.bodies = createBodies(options.nbParticles);
+        this.particleGraphics = new ParticleGraphics(1, options.colorHue, this.bodies);
+        this.scene.add(this.particleGraphics.points);
         this.controls.update();
         this.setFOV(options.fov);
         this.setSize(canvasSize);
-        
-        this.setViewPosition([0, 0 , 27500], [0,0,0])
+        this.setViewPosition([0, 0 , 10000000], [0,0,0])
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
     }
 
     setViewPosition(cameraPosition: V3, target: V3) {
-
         this.controls.target.set(target[0], target[1], target[2]);
         this.camera.position.set(cameraPosition[0], cameraPosition[1], cameraPosition[2]);
     }
@@ -89,12 +75,23 @@ export class BodyScene {
     setCameraUp(v = new Vector3(0, 1, 0)) {
         this.camera.up.set(v.x, v.y, v.z);
     }
-    getAmbiantLightLevel(): number {
-        return this.ambiantLight.intensity;
+
+    getParticleCount() {
+        return this.bodies.length;
     }
 
-    setAmbiantLightLevel(level: number) {
-        this.ambiantLight.intensity = level;
+    setParticleCount(count: number) {
+        const bodies = createBodies(count);
+        this.particleGraphics.setBodies(bodies);
+        this.bodies = bodies;
+    }
+
+    getColorHue(): number {
+        return this.particleGraphics.getColorHue();
+    }
+
+    setColorHue(level: number) {
+        this.particleGraphics.setColorHue(level);
     }
 
     getFov(): number {
@@ -117,22 +114,23 @@ export class BodyScene {
     getState(): SceneOptionsState {
         const options: SceneOptionsState = {};
         options.fov = this.getFov();
-        options.ambientLightLevel = this.getAmbiantLightLevel();
+        options.colorHue = this.getColorHue();
         options.date = this.clock.getTime();
+        options.nbParticles = this.getParticleCount();
         return options;
     }
 
-    start() {
-    
+    start() {    
         this.render();
         const timer = this.clock.startTimer("AnimationTimer");
         this.controls.enabled = true;
 
         this.renderer.setAnimationLoop(async () => {
             const delta = timer.getDelta()!;
-            await this.tick(delta);            
+            await this.tick(delta);                     
             this.controls.update();
             this.render();
+            this.stats.update();
         });
     }
 
@@ -158,60 +156,81 @@ export class BodyScene {
     }
 
     /**
-     * Trigger the mechanism that ultimately updates the positions of our objects.
+     * Updates the kinematics of our objects.
      * 
      * @param deltaTime 
      * @returns 
      */
     tick(deltaTime: number) {
         return new Promise((resolve) => {
-            const positionAttributeBuffer = this.particles.geometry.attributes.position;
+            const positionAttributeBuffer = this.particleGraphics.points.geometry.attributes.position;
             this.sceneUpdater.update(positionAttributeBuffer.array, this.bodies, deltaTime);
             positionAttributeBuffer.needsUpdate = true;
             resolve(null);
         });
     }
 
-
-
     render() {
         this.renderer.render(this.scene, this.camera);
     }
-
-    /** 
-     * @param bodies 
-     * @returns Map<string, BodyObject3D> 
-     */
-
 }
 
-function createParticles(): [Points, Body[]] {
-    const vertices = [];
+function createBodies(count: number): Body[] {
+    const bodies = [];  
 
-    const bodies = [];
-
-
-    for ( let i = 0; i < 2000; i ++ ) {
-        const x = MathUtils.randFloatSpread(2000);
-        const y =MathUtils.randFloatSpread(2000);
-        const z = MathUtils.randFloatSpread(2000);
-        vertices.push( x, y, z );
-
-        bodies.push(new Body(1000000000000, 1, [x, y, z], 
-            [MathUtils.randFloatSpread( 0.005 ), 
-                MathUtils.randFloatSpread( 0.005 ),
-                MathUtils.randFloatSpread( 0.005 )]));      }
-
-    const geometry = new BufferGeometry();
-    geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
-    const material = new PointsMaterial( { size: 50, color: 0xff0000 } );
-    const points = new Points( geometry, material );
-
-    return [points, bodies];
+    for ( let i = 0; i < count; i ++ ) {
+        const mass = 1e20;
+        const radius = 10e3;
+        const position: V3 = [MathUtils.randFloatSpread(2000000), MathUtils.randFloatSpread(2000000), MathUtils.randFloatSpread(2000000)];
+        const velocity: V3 =  [MathUtils.randFloatSpread( 1000 ), MathUtils.randFloatSpread( 1000 ),MathUtils.randFloatSpread( 1000 )];
+        bodies.push(new Body(mass, radius, position, velocity));
+    }
+    return bodies;
 }
+
+
+function setupResizeHandlers(container: HTMLElement, sizeObserver: (size: Dim) => void) {
+    window.addEventListener("resize",
+        throttle(1000 / 30, undefined,
+            (event: UIEvent) => {
+                sizeObserver(new Dim(container.clientWidth, container.clientHeight));
+            }
+        ));
+}
+
+function createScene(): Scene {
+    const scene = new Scene();
+                                  // 5000000000
+    // scene.fog = new Fog( 0x000000, 1, 25000000 );
+    scene.fog = new FogExp2( 0x000000, 0.000000075 );
+    scene.background = new Color('black');
+    return scene;
+}
+
+function createCamera({ fov = 35, aspectRatio = 1.0, near = CAMERA_NEAR, far = CAMERA_FAR } = {}): PerspectiveCamera {
+    return new PerspectiveCamera(fov, aspectRatio, near, far);
+}
+
+function createRenderer(): WebGLRenderer {
+    const renderer = new WebGLRenderer({ antialias: true });
+    return renderer
+}
+
+function createControls(camera: Camera, domElement: HTMLElement): ArcballControls {
+    // const controls = new OrbitControls(camera, domElement);
+    const controls = new ArcballControls(camera, domElement);
+
+    // controls.enableDamping = true;
+    return controls;
+}
+
+
+
+
 
 
 // function acreateParticles(): [Points, Body[]] {
+
 //     const v = { x: -573.8733329927818, y: -781.9533749710408, z: -409.1276938730193 };
 //     const d = { x: -307304783.7767792, y: 181536068.80307007, z: 105563387.89339447 };
 
@@ -245,54 +264,15 @@ function createParticles(): [Points, Body[]] {
 //     bodies.push(earth);
 //     bodies.push(moon);
 
+//     const textureLoader = new TextureLoader();
 
+//     const circle = textureLoader.load( '/public/assets/disc.png' );
 //     const geometry = new BufferGeometry();
 //     geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3))
-//     const material = new PointsMaterial( { size: 5000000, color: 0xff0000 } );
+//     const material = new PointsMaterial( { size: 5000000, color: 0xff0000, map: circle } );
 //     const points = new Points( geometry, material );
 
 //     return [points, bodies];
 
     
 // }
-
-
-function createAmbiantLight(intensity: number) {
-    return new AmbientLight("white", intensity);
-}
-
-
-function setupResizeHandlers(container: HTMLElement, sizeObserver: (size: Dim) => void) {
-    window.addEventListener("resize",
-        throttle(1000 / 30, undefined,
-            (event: UIEvent) => {
-                sizeObserver(new Dim(container.clientWidth, container.clientHeight));
-            }
-        ));
-}
-
-function createScene(): Scene {
-    const scene = new Scene();
-    scene.background = new Color('black');
-    return scene;
-}
-
-function createCamera({ fov = 35, aspectRatio = 1.0, near = CAMERA_NEAR, far = CAMERA_FAR } = {}): PerspectiveCamera {
-    return new PerspectiveCamera(fov, aspectRatio, near, far);
-}
-
-function createRenderer(): WebGLRenderer {
-    const renderer = new WebGLRenderer({ antialias: true });
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = PCFShadowMap;
-    return renderer
-}
-
-
-function createControls(camera: Camera, domElement: HTMLElement): ArcballControls {
-    // const controls = new OrbitControls(camera, domElement);
-    const controls = new ArcballControls(camera, domElement);
-
-    // controls.enableDamping = true;
-    return controls;
-}

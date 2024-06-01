@@ -1,9 +1,5 @@
 import { PropertyReviver, compositeReviver, namedPropertyReviver } from './jsonreviver.ts';
-
 import LZString from 'lz-string';
-
-
-
 
 type ParamName = "zstate" | "state";
 
@@ -18,7 +14,7 @@ type ParamName = "zstate" | "state";
 export default class LocationBar<A> {
     reviver: PropertyReviver
 
-    constructor(reviver: PropertyReviver=compositeReviver([])){
+    constructor(reviver: PropertyReviver = compositeReviver([])) {
         this.reviver = reviver;
     }
 
@@ -36,8 +32,6 @@ export default class LocationBar<A> {
             window.history.pushState(stateString, "", "?".concat(stateParam, "=", stateString));
         }
     }
-
-
 
     mapURLSearchParamsToState(params: URLSearchParams): A {
         const state = params.get('zstate') ?

@@ -4,19 +4,18 @@ import { V3, magnitude, substract } from "./geometry";
 export interface PositionedMass {
     mass: number;
     position: V3;
-
-
+    radius?: number;
 };
 
 export class Body implements PositionedMass {
-    
+
     mass: number;
 
     /**
      * in meters
      */
     radius: number;
-   
+
 
     /** 
      * in meters
@@ -27,12 +26,12 @@ export class Body implements PositionedMass {
      * in meters/s
      */
     velocity!: V3;
-    
+
 
     acceleration?: V3;
 
 
-    constructor(mass: number, radius: number, position: V3, velocity: V3){
+    constructor(mass: number, radius: number, position: V3, velocity: V3) {
         this.mass = mass;
         this.radius = radius;
         this.position = position;
@@ -64,18 +63,18 @@ export class Body implements PositionedMass {
      * @param time 
      * @returns so + vo * t + a * (t * t)/2
     */
-   doPosition(acc: V3, time: number): V3 {
-       const time2 = (time * time) / 2;
-       return [
-           this.position[0] + (this.velocity[0] * time) + (acc[0] * time2),
-           this.position[1] + (this.velocity[1] * time) + (acc[1] * time2),
-           this.position[2] + (this.velocity[2] * time) + (acc[2] * time2),
+    doPosition(acc: V3, time: number): V3 {
+        const time2 = (time * time) / 2;
+        return [
+            this.position[0] + (this.velocity[0] * time) + (acc[0] * time2),
+            this.position[1] + (this.velocity[1] * time) + (acc[1] * time2),
+            this.position[2] + (this.velocity[2] * time) + (acc[2] * time2),
         ];
     }
-    
+
     addForce(force: V3): V3 {
         const acc = this.acceleration || [0, 0, 0];
-        this.acceleration=  [acc[0] + (force[0] / this.mass), acc[1] + (force[1] / this.mass), acc[2] + (force[2] / this.mass)];
+        this.acceleration = [acc[0] + (force[0] / this.mass), acc[1] + (force[1] / this.mass), acc[2] + (force[2] / this.mass)];
         return this.acceleration;
     }
 
@@ -129,15 +128,18 @@ const G: number = 6.674e-11;
  */
 export function twoBodyForce(body1: PositionedMass, body2: PositionedMass): V3 {
     // const vec = body1.distanceTo(body2);
-    const vec =  substract(body1.position, body2.position);
+    const vec = substract(body1.position, body2.position);
     const mag = magnitude(vec);
-    return force(vec, mag, body1.mass, body2.mass );
+    return force(vec, mag, body1.mass, body2.mass);
 }
 
 export function force(r: V3, magnitude: number, m1: number, m2: number): V3 {
+    if (magnitude < 1) {
+        console.log("mag" + magnitude);
+    }
     const numerator = G * m1 * m2;
     const denominator = magnitude * magnitude * magnitude;//, 3);
-    return [        
+    return [
         (numerator * r[0]) / denominator,
         (numerator * r[1]) / denominator,
         (numerator * r[2]) / denominator
