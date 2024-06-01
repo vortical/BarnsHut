@@ -1,6 +1,7 @@
 import GUI from "lil-gui";
 import { BodyScene, SceneOptionsState } from "./scene";
 import LocationBar from "./LocationBar";
+import { throttle } from "./throttle";
 
 
 /**
@@ -29,6 +30,8 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
     const options = {
         fov: bodyScene.getFov(),
         timescale:bodyScene.getTimeScale(),
+        colorHue: bodyScene.getColorHue(),
+        nbParticles: bodyScene.getParticleCount(),
     //    backgroudLightLevel: bodyScene.getAmbiantLightLevel(),
 
 
@@ -47,8 +50,11 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
     gui.add(options, "timescale", 1.0, 3600*6, 1).name('Time Scale')
         .onChange((v: number) => bodyScene.setTimeScale(v));
 
-    // gui.add(options, "backgroudLightLevel", 0, 1, 0.01).name('Ambiant Light')
-    //     .onChange((v: number) => bodyScene.setAmbiantLightLevel(v));
+    gui.add(options, "colorHue", 0, 1, 1.0/360.0).name('Color Hue')
+        .onChange((v: number) => bodyScene.setColorHue(v));
+
+    gui.add(options, "nbParticles", 1, 5000, 100).name('Particle Count')
+        .onChange(throttle(50, this, (v: number) => bodyScene.setParticleCount(v)));
 
     gui.add(options, "pushState").name('Push State to Location Bar and History');
 

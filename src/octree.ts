@@ -12,10 +12,6 @@ export interface Octree {
     bodies: PositionedMass[];
     depth: number;
     count: number;
-
-    // centerOfMass(): PositionedMass;
-    // depth(): number;
-    // count(): number;
 }
 
 export class OctreeLeaf implements Octree {
@@ -25,43 +21,18 @@ export class OctreeLeaf implements Octree {
     centerOfMass: PositionedMass;
     count: number;
     depth = 1;
-    
 
     constructor(bodies: PositionedMass[] = [], box: Box = new Box([-DIM, -DIM, -DIM], [DIM, DIM, DIM])) {
-
         this.bodies = bodies
         this.box = box;
+        this.count = bodies.length; // = 1;
 
         if (this.bodies.length == 0) {
             this.centerOfMass = { position: this.box.median, mass: 0 };
         } else {
             this.centerOfMass = centerOfMass(this.bodies);
         }
-
-        this.count = bodies.length; // = 1;
-
     }
-
-
-    // centerOfMass(): PositionedMass {
-    //     if (this._com == undefined) {
-    //         if (this.bodies.length == 0) {
-    //             this._com = { position: this.box.median, mass: 0 };
-    //         } else {
-    //             this._com = centerOfMass(this.bodies);
-    //         }
-    //     }
-    //     return this._com;
-    // }
-
-    // count(): number {
-    //     return this.bodies.length;
-    //     // return 1;
-    // }
-
-    // depth(): number {
-    //     return 1;
-    // }
 }
 
 export class CompositeOctree implements Octree {
@@ -80,15 +51,18 @@ export class CompositeOctree implements Octree {
         this.children = children;
         this.box = box;
         children.forEach(c => c.parent = this);
-        this.centerOfMass= centerOfMass(this.children.map(c => c.centerOfMass));        
+        this.centerOfMass = centerOfMass(this.children.map(c => c.centerOfMass));
     }
 
+    /**
+     * Note: not used, only here for consistency as we only need center of mass in a composite.
+     * We only use bodies under a LeafOctree, .
+     */
     get bodies(): PositionedMass[] {
         if (this._bodies == undefined) {
             this._bodies = this.children.flatMap(c => c.bodies);
         }
         return this._bodies;
-
     }
 
     /**
@@ -97,20 +71,18 @@ export class CompositeOctree implements Octree {
      * Don't count the nodes.
      * */
     get count(): number {
-        if(this._count == undefined){
+        if (this._count == undefined) {
             this._count = this.children.map(c => c.count).reduce((p, c) => p + c);
             // this._count = this.children.map(c => c.count()).reduce((p, c) => p+c) + 1;
         }
         return this._count;
-
     }
 
     get depth(): number {
-        if(this._depth == undefined){
+        if (this._depth == undefined) {
             this._depth = Math.max(...this.children.map(c => c.depth)) + 1;
         }
         return this._depth;
-
     }
 
     toString() {
@@ -156,11 +128,11 @@ export function boxOf(bodies: Body[] = []): Box {
  * @returns 
  */
 export function octreeOf(bodies: Body[] | PositionedMass[] = [], box: Box, depth: number = 1): Octree {
-    
+
     function divide(bodies: Body[] | PositionedMass[], box: Box, depth: number): Octree[] {
         const octantBodyMap = groupBodiesByOctantIndex(bodies, box.median);
         const octantBoxMap = divideOctantBox(box);
-    
+
         return Array.from(octantBodyMap, ([index, bodies]) => octreeOf(bodies, octantBoxMap.get(index)!, depth + 1));
     }
 
@@ -187,7 +159,6 @@ export const OctantIndexToOctantCoords: OctantCoordinates[] = [
 ] as const;
 
 export function octantCoordsToOctantIndex([x, y, z]: OctantCoordinates): OctantIndex {
-    // const [x, y, z] = coords;
     return (x * 4) + (y * 2) + (z) as OctantIndex;
 }
 
@@ -212,7 +183,6 @@ export function octantCoordinatesForBody(body: PositionedMass, median: V3): Octa
 export function groupBodiesByOctantIndex(bodies: PositionedMass[], median: V3): Map<OctantIndex, PositionedMass[]> {
     return Map.groupBy(bodies, (body: PositionedMass) => octantIndexForBody(body, median));
 }
-
 
 /**
  * Given a parent Box, create a child octant box at octantCoordinates.
