@@ -6,7 +6,7 @@ import { Dim, V3 } from './geometry';
 import { Body } from './Body';
 import { Clock } from './Clock';
 import { throttle } from './throttle';
-import { NBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
+import { NBodyOctreeSystemUpdater, LeapfrogNBodyOctreeSystemUpdater, EulerNBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
 import { ParticleGraphics } from './ParticleGraphics';
 
 const CAMERA_NEAR = 500;
@@ -28,6 +28,15 @@ export type SceneOptionsState = {
     sdRatio?: number;
 };
 
+
+export const ParticleIntegrationMethods = {
+    euler: EulerNBodyOctreeSystemUpdater,
+    leapfrog: LeapfrogNBodyOctreeSystemUpdater,
+}
+
+export type ParticleIntegrationMethod = typeof ParticleIntegrationMethods[keyof typeof ParticleIntegrationMethods];
+
+
 /**
  * Our main facade class
  */
@@ -43,6 +52,7 @@ export class BodyScene {
     particleGraphics: ParticleGraphics;
     bodies: Body[];
     stats: Stats;
+    integrationMethod: ParticleIntegrationMethod
     
     constructor(parentElement: HTMLElement, sceneUpdater: NBodyOctreeSystemUpdater, stateOptions:SceneOptionsState){
         const options  = { ...defaultSceneProperties, ...stateOptions };        
@@ -51,6 +61,7 @@ export class BodyScene {
         this.camera = createCamera();
         this.scene = createScene();
         this.renderer = createRenderer();
+
         this.sceneUpdater = sceneUpdater
         this.sceneUpdater.sdMaxRatio = options.sdRatio;
         this.clock = new Clock(options.date);
@@ -64,10 +75,29 @@ export class BodyScene {
         this.particleGraphics = new ParticleGraphics(1, options.colorHue, this.bodies);
         this.scene.add(this.particleGraphics.points);
         this.controls.update();
+
         this.setFOV(options.fov);
         this.setSize(canvasSize);
         this.setViewPosition([0, 0 , 10000000], [0,0,0])
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
+
+        this.integrationMethod = ParticleIntegrationMethods.euler;
+    }
+
+
+    setParticleIntegrationMethod(integrationMethod: ParticleIntegrationMethod) {
+        this.integrationMethod = integrationMethod;
+        this.setSceneUpdater(new integrationMethod());
+    }
+
+    getParticleIntegrationMethod():ParticleIntegrationMethod{
+        return this.integrationMethod;
+    }
+
+    setSceneUpdater(sceneUpdater: NBodyOctreeSystemUpdater){
+        const sdRatio =  this.sceneUpdater.sdMaxRatio;
+        this.sceneUpdater = sceneUpdater
+        this.sceneUpdater.sdMaxRatio = sdRatio;
     }
 
     setViewPosition(cameraPosition: V3, target: V3) {

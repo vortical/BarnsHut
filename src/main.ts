@@ -1,5 +1,5 @@
 import LocationBar from './LocationBar';
-import { NBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
+import { EulerNBodyOctreeSystemUpdater, NBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
 import { BodyScene, SceneOptionsState } from './scene';
 import './style.css'
 import { SimpleUI } from './ui';
@@ -11,7 +11,7 @@ const mainElement = document.querySelector<HTMLDivElement>('#scene-container')!;
   const options = locationBar.getState();
 
 
-  const nbodyScene = new BodyScene(mainElement, new NBodyOctreeSystemUpdater(), options);
+  const nbodyScene = new BodyScene(mainElement, new EulerNBodyOctreeSystemUpdater(), options);
   new SimpleUI(nbodyScene, locationBar);
   nbodyScene.start();
 })();

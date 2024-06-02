@@ -1,5 +1,5 @@
 import GUI from "lil-gui";
-import { BodyScene, SceneOptionsState } from "./scene";
+import { BodyScene, ParticleIntegrationMethod, ParticleIntegrationMethods, SceneOptionsState } from "./scene";
 import LocationBar from "./LocationBar";
 import { throttle } from "./throttle";
 
@@ -33,6 +33,7 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
         colorHue: bodyScene.getColorHue(),
         nbParticles: bodyScene.getParticleCount(),
         sdRatio: bodyScene.getSdMaxRatio(),
+        integrationMethod: bodyScene.getParticleIntegrationMethod(),
     //    backgroudLightLevel: bodyScene.getAmbiantLightLevel(),
 
 
@@ -61,6 +62,9 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
     
     gui.add(options, "sdRatio", 0.1, 10, 0.1).name('S/D Ratio')
         .onChange((v: number) => bodyScene.setSdMaxRatio(v));
+
+    gui.add(options, 'integrationMethod', ParticleIntegrationMethods)
+        .onChange((v: ParticleIntegrationMethod) => bodyScene.setParticleIntegrationMethod(v));        
 
     gui.add(options, "pushState").name('Push State to Location Bar and History');
 
