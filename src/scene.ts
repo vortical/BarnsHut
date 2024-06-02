@@ -6,7 +6,7 @@ import { Dim, V3 } from './geometry';
 import { Body } from './Body';
 import { Clock } from './Clock';
 import { throttle } from './throttle';
-import { NBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
+import { NBodyOctreeSystemUpdater, LeapfrogNBodyOctreeSystemUpdater, EulerNBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
 import { ParticleGraphics } from './ParticleGraphics';
 
 const CAMERA_NEAR = 500;
@@ -16,7 +16,8 @@ const defaultSceneProperties: Required<SceneOptionsState> = {
     fov: 35.5,
     colorHue: 0.5,
     date: Date.now(),
-    nbParticles: 500
+    nbParticles: 500,
+    sdRatio: 0.8
 };
 
 export type SceneOptionsState = {
@@ -24,7 +25,17 @@ export type SceneOptionsState = {
     colorHue?: number;
     date?: number;
     nbParticles?: number;
+    sdRatio?: number;
 };
+
+
+export const ParticleIntegrationMethods = {
+    euler: EulerNBodyOctreeSystemUpdater,
+    leapfrog: LeapfrogNBodyOctreeSystemUpdater,
+}
+
+export type ParticleIntegrationMethod = typeof ParticleIntegrationMethods[keyof typeof ParticleIntegrationMethods];
+
 
 /**
  * Our main facade class
@@ -41,6 +52,7 @@ export class BodyScene {
     particleGraphics: ParticleGraphics;
     bodies: Body[];
     stats: Stats;
+    integrationMethod: ParticleIntegrationMethod
     
     constructor(parentElement: HTMLElement, sceneUpdater: NBodyOctreeSystemUpdater, stateOptions:SceneOptionsState){
         const options  = { ...defaultSceneProperties, ...stateOptions };        
@@ -49,7 +61,9 @@ export class BodyScene {
         this.camera = createCamera();
         this.scene = createScene();
         this.renderer = createRenderer();
+
         this.sceneUpdater = sceneUpdater
+        this.sceneUpdater.sdMaxRatio = options.sdRatio;
         this.clock = new Clock(options.date);
         this.stats = new Stats();
         parentElement.appendChild(this.stats.dom);
@@ -61,10 +75,29 @@ export class BodyScene {
         this.particleGraphics = new ParticleGraphics(1, options.colorHue, this.bodies);
         this.scene.add(this.particleGraphics.points);
         this.controls.update();
+
         this.setFOV(options.fov);
         this.setSize(canvasSize);
         this.setViewPosition([0, 0 , 10000000], [0,0,0])
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
+
+        this.integrationMethod = ParticleIntegrationMethods.euler;
+    }
+
+
+    setParticleIntegrationMethod(integrationMethod: ParticleIntegrationMethod) {
+        this.integrationMethod = integrationMethod;
+        this.setSceneUpdater(new integrationMethod());
+    }
+
+    getParticleIntegrationMethod():ParticleIntegrationMethod{
+        return this.integrationMethod;
+    }
+
+    setSceneUpdater(sceneUpdater: NBodyOctreeSystemUpdater){
+        const sdRatio =  this.sceneUpdater.sdMaxRatio;
+        this.sceneUpdater = sceneUpdater
+        this.sceneUpdater.sdMaxRatio = sdRatio;
     }
 
     setViewPosition(cameraPosition: V3, target: V3) {
@@ -74,6 +107,14 @@ export class BodyScene {
 
     setCameraUp(v = new Vector3(0, 1, 0)) {
         this.camera.up.set(v.x, v.y, v.z);
+    }
+
+    setSdMaxRatio(ratio: number) {
+        this.sceneUpdater.sdMaxRatio = ratio; 
+    }
+
+    getSdMaxRatio(): number {
+        return this.sceneUpdater.sdMaxRatio;
     }
 
     getParticleCount() {
@@ -117,6 +158,7 @@ export class BodyScene {
         options.colorHue = this.getColorHue();
         options.date = this.clock.getTime();
         options.nbParticles = this.getParticleCount();
+        options.sdRatio = this.sceneUpdater.sdMaxRatio;
         return options;
     }
 
