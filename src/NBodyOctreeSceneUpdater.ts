@@ -7,7 +7,7 @@ import { PositionedMass } from "./Body.ts";
 import { Octree, OctreeLeaf, boxOf, octreeOf } from "./octree.ts";
 
 const DIM = 15.0e12; // meters
-const SD_MAX_RATIO = 1.00;
+const DEFAULT_SD_MAX_RATIO = 1.00;
 // const SD_MAX_RATIO = 0.1;
 const stats = {
     leaf: 0,
@@ -17,7 +17,7 @@ const stats = {
 };
 
 
-function updateBodies(bodies: Body[], octree: Octree, time: number) {
+function updateBodies(bodies: Body[], octree: Octree, time: number, sdMaxRatio: number=DEFAULT_SD_MAX_RATIO) {
 
     const buf: V3 = [0, 0, 0];
     function accelerate(acceleratedObject: Body, tree: Octree, depth: number = 1) {
@@ -37,7 +37,7 @@ function updateBodies(bodies: Body[], octree: Octree, time: number) {
             const r = substract(com.position, acceleratedObject.position, buf);
             const d = magnitude(r);
 
-            if (s / d < SD_MAX_RATIO || tree.count == 1) { // wont enconter tree.count == 1....take out
+            if (s / d < sdMaxRatio) { 
                 stats.composite += 1;
                 acceleratedObject.addForce(force(r, d, com.mass, acceleratedObject.mass));
 
@@ -79,14 +79,21 @@ function updateBodies(bodies: Body[], octree: Octree, time: number) {
     }
 
     // todo: enable switching between the 2 approaches.
-    velocityAtAverageAcceleration();
-    // xxx();
+    // velocityAtAverageAcceleration();
+    xxx();
 }
 
 
 export class NBodyOctreeSystemUpdater {
     isOneTimeUpdate = false;
     isEnabled = true;
+    sdMaxRatio: number;
+
+
+    constructor(sdMaxRatio: number = 0.8){
+        this.sdMaxRatio=sdMaxRatio;
+    }
+
 
     update(particlePositions: TypedArray, bodies: Body[], timestepMs: number) {
 
@@ -98,7 +105,7 @@ export class NBodyOctreeSystemUpdater {
         // console.log("o time"+ (performance.now() - t0).toFixed(0));
         // const t1 = performance.now();
 
-        updateBodies(bodies, octree, timestepMs / 1000.0);
+        updateBodies(bodies, octree, timestepMs / 1000.0, this.sdMaxRatio);
         // const t2 = performance.now() - t1;
 
         // console.log("b time"+ t2.toFixed(0));

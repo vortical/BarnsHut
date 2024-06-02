@@ -16,7 +16,8 @@ const defaultSceneProperties: Required<SceneOptionsState> = {
     fov: 35.5,
     colorHue: 0.5,
     date: Date.now(),
-    nbParticles: 500
+    nbParticles: 500,
+    sdRatio: 0.8
 };
 
 export type SceneOptionsState = {
@@ -24,6 +25,7 @@ export type SceneOptionsState = {
     colorHue?: number;
     date?: number;
     nbParticles?: number;
+    sdRatio?: number;
 };
 
 /**
@@ -50,6 +52,7 @@ export class BodyScene {
         this.scene = createScene();
         this.renderer = createRenderer();
         this.sceneUpdater = sceneUpdater
+        this.sceneUpdater.sdMaxRatio = options.sdRatio;
         this.clock = new Clock(options.date);
         this.stats = new Stats();
         parentElement.appendChild(this.stats.dom);
@@ -74,6 +77,14 @@ export class BodyScene {
 
     setCameraUp(v = new Vector3(0, 1, 0)) {
         this.camera.up.set(v.x, v.y, v.z);
+    }
+
+    setSdMaxRatio(ratio: number) {
+        this.sceneUpdater.sdMaxRatio = ratio; 
+    }
+
+    getSdMaxRatio(): number {
+        return this.sceneUpdater.sdMaxRatio;
     }
 
     getParticleCount() {
@@ -117,6 +128,7 @@ export class BodyScene {
         options.colorHue = this.getColorHue();
         options.date = this.clock.getTime();
         options.nbParticles = this.getParticleCount();
+        options.sdRatio = this.sceneUpdater.sdMaxRatio;
         return options;
     }
 
