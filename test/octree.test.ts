@@ -22,7 +22,7 @@ test('octree leaf ',  () => {
     
     const box = new Box([-2,-2,-2],[2,2,2])
     const octree = octreeOf(bodies, box) 
-    expect(octree.depth()).toBe(1);
+    expect(octree.depth).toBe(1);
     expect(octree).toBeInstanceOf(OctreeLeaf);
 
     
@@ -81,7 +81,7 @@ test('octree depth 2 b ',  () => {
     const octree = octreeOf(bodies, box) 
     
     expect(octree).toBeInstanceOf(CompositeOctree);
-    expect(octree.depth()).toBe(2);
+    expect(octree.depth).toBe(2);
     expect(validateContainment(octree as CompositeOctree)).toBeTruthy();
 });
 
@@ -97,7 +97,7 @@ test('octree depth 2 with 3 bodies ',  () => {
     const octree = octreeOf(bodies, box) 
 
     expect(octree).toBeInstanceOf(CompositeOctree);
-    expect(octree.depth()).toBe(2);
+    expect(octree.depth).toBe(2);
     expect(validateContainment(octree as CompositeOctree)).toBeTruthy();
 });
 
@@ -116,7 +116,7 @@ test('octree depth 3 with 3 bodies ',  () => {
     const octree = octreeOf(bodies, box) 
 
     expect(octree).toBeInstanceOf(CompositeOctree);
-    expect(octree.depth()).toBe(3);
+    expect(octree.depth).toBe(3);
     expect(validateContainment(octree as CompositeOctree)).toBeTruthy();
 });
 

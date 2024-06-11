@@ -25,9 +25,32 @@ export function substract(a: V3, b: V3, result: V3 = [0, 0, 0]): V3 {
   return result;
 }
 
-export function divideScalar(a: V3, denom: number): V3 {
-  return [a[0] / denom, a[1] / denom, a[2] / denom];
+export function add(a: V3, b: V3, result: V3 = [0, 0, 0]): V3 {
+  result[0] = a[0] + b[0];
+  result[1] = a[1] + b[1];
+  result[2] = a[2] + b[2];
+  return result;
 }
+
+
+export function divideScalar(a: V3, denom: number, result:V3 = [0,0,0]): V3 {
+  result[0] = a[0] / denom;
+  result[1] = a[1] / denom ;
+  result[2] = a[2] /denom ;
+  return result;
+
+  // return [a[0] / denom, a[1] / denom, a[2] / denom];
+}
+
+export function multScalar(a: V3, mult: number, result:V3 = [0,0,0]): V3 {
+  result[0] = a[0] * mult;
+  result[1] = a[1] *  mult ;
+  result[2] = a[2] * mult ;
+  return result;
+
+  // return [a[0] / denom, a[1] / denom, a[2] / denom];
+}
+
 
 export function magnitude(v: V3): number {
   return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
@@ -47,7 +70,24 @@ export function distanceMagnitude(v1: V3, v2: V3): number {
  * 
  * @returns unique point where the weighted relative position of a distributed mass sums to zero
  */
-export function centerOfMass(bodies: Set<PositionedMass> | PositionedMass[]): PositionedMass {
+export function centerOfMass(bodies: PositionedMass[]): PositionedMass {
+
+  // const com = bodies.reduce(
+  //   (accumulator, current) => {
+  //     const bodymass = current.mass;
+  //     const position = current.position;
+  //     const accumulatorPosition = accumulator.position
+
+  //     accumulatorPosition[0] += position[0] * bodymass;
+  //     accumulatorPosition[1] += position[1] * bodymass;
+  //     accumulatorPosition[2] += position[2] * bodymass;
+  //     accumulator.mass += bodymass;
+  //     return accumulator;
+  
+  //   }, { position: [0, 0, 0],mass: 0}
+  // );
+
+  
 
   let sumX = 0, sumY = 0, sumZ = 0;
   let sumMass = 0.0;
@@ -71,6 +111,7 @@ export function centerOfMass(bodies: Set<PositionedMass> | PositionedMass[]): Po
     ],
     mass: sumMass
   };
+
 
 }
 
@@ -96,6 +137,14 @@ export class Box {
     this.maxDimension = Math.max(...this.dimensions);
   }
 
+  static centeredBox(center: V3, size: number){
+    const halfSize = size/2;
+    const min: V3 = [center[0] - halfSize, center[1] - halfSize, center[2] - halfSize ];
+    const max: V3 = [center[0] + halfSize, center[1] + halfSize, center[2] + halfSize ];
+
+    return new Box(min, max);
+
+  }
   contains(position: V3) {
     const min = this.min;
     // max boundary is excluded
