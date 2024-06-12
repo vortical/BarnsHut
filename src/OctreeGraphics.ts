@@ -5,9 +5,9 @@ import { Octree } from './octree';
  * The Buffer size of the positions attribute representing the line endpoints.
  * 
  * We use LineSegments (i.e.: gl.LINES), vertices are not reused (i.e.: LINE STRIPS) because we just draw
- * the medians: there are no overlapping vertices.
+ * the medians (i.e.: no edges... so there are no overlapping vertices).
  */
-const MAX_VERTICES = 80000;
+const MAX_VERTICES = 200000;
 
 /**
  * Each shown octree is depicted by its median axes up to a a maxShownDepth. Empty Intermediate 
@@ -19,16 +19,18 @@ export class OctreeGraphics {
     _colorHue!: number;
     maxShownDepth: number = 6;
 
-    constructor(enabled: boolean = false, maxShownDepth: number = 1, colorHue: number= 0.5, opacity: number = 1.0) {
-        this.material = new LineBasicMaterial({ color: 0xffffff, opacity: opacity, transparent: true });
-        this.colorHue = colorHue;
-        
+    constructor(enabled: boolean = false, maxShownDepth: number = 1, colorHue: number = 0.5, opacity: number = 1.0) {
         const geometry = new BufferGeometry();
-        const positions = new Float32Array(MAX_VERTICES * 3);
-        const positionAttribute = new Float32BufferAttribute(positions, 3);
+        const positionAttribute = new Float32BufferAttribute(new Float32Array(MAX_VERTICES * 3), 3);
         geometry.setAttribute('position', positionAttribute);
+        this.material = new LineBasicMaterial({ color: 0xffffff, opacity: opacity, transparent: true });
         this.line = new LineSegments(geometry, this.material);
+
+        this.colorHue = colorHue;
         this.enabled = enabled;
+        this.maxShownDepth = maxShownDepth;
+        this.colorHue = colorHue;
+        this.opacity = opacity;
     }
 
     set opacity(value: number) {
@@ -46,7 +48,6 @@ export class OctreeGraphics {
     get colorHue(): number {
         return this._colorHue;
     }
-
 
     set enabled(value: boolean) {
         this.line.visible = value;
@@ -73,7 +74,7 @@ export class OctreeGraphics {
          */
 
         function updatePositionAttribute(octree: Octree, positionsAttribute: BufferAttribute, index: number, depth: number): number {
-            // Only draw up to maxShownDepth -or- leaves above maxShownDepth
+            // Only draw up to maxShownDepth
             if (depth > maxDepth || octree.children == undefined || (octree.children && octree.children.length > 0)) {
                 const min = octree.box.min;
                 const max = octree.box.max;
@@ -90,9 +91,9 @@ export class OctreeGraphics {
                 // Z axis
                 positionsAttribute.setXYZ(index++, median[0], median[1], min[2]);
                 positionsAttribute.setXYZ(index++, median[0], median[1], max[2]);
-            } 
+            }
 
-            if (octree.children && depth <= maxDepth ){
+            if (octree.children && depth <= maxDepth) {
                 for (const child of octree.children!) {
                     index = updatePositionAttribute(child, positionsAttribute, index, depth + 1);
                 }
@@ -100,17 +101,16 @@ export class OctreeGraphics {
             return index;
 
         }
-    
+
         const positionAttributeBuffer: BufferAttribute = this.line.geometry.getAttribute('position') as BufferAttribute;
         const verticesRange = updatePositionAttribute(octree, positionAttributeBuffer, 0, 2);
-        console.log("ranger: "+verticesRange);
         this.line.geometry.setDrawRange(0, verticesRange);
         positionAttributeBuffer.needsUpdate = true;
         this.line.geometry.computeBoundingSphere();
     }
 
 
-  
+
 
 
     // setColorHue(colorHue: number) {

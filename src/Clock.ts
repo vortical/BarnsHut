@@ -47,21 +47,22 @@ export class Clock {
      *
      * @param msToUnit units based on ms
      */
-    constructor(clockTimeMs: number = Date.now()) {
+    constructor(clockTimeMs: number = Date.now(), timescale: number = 1) {
         this.setTime(clockTimeMs);
+        this.setScale(timescale)
     }
 
     setPaused(value: boolean): boolean {
         if (value) {
             if (!this.isPaused()) {
                 this.savedScale = this.scale;
-                this.setScale(0, false);
+                this.setScale(0);
                 this._isPaused = true;
             }
         } else {
             if (this.isPaused()) {
                 this._isPaused = false;
-                this.setScale(this.savedScale, false);
+                this.setScale(this.savedScale);
             }
         }
         return this.isPaused();
@@ -88,7 +89,7 @@ export class Clock {
 
 
 
-    setScale(scale: number, isNotify: boolean = true) {
+    setScale(scale: number) {
         if (this.isPaused()) {
             // While paused, our scale is actually 0
             // savedScale holds the non paused scale value which will

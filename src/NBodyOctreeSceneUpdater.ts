@@ -39,10 +39,11 @@ export abstract class NBodyOctreeSystemUpdater {
 
     accelerate(acceleratedObject: Body, tree: Octree, depth: number = 1) {
 
-        stats.total += 1;
+        
 
         if (tree.children == undefined) {// : slow: instanceof OctreeLeaf){
             stats.leaf += 1;
+            stats.total += 1;
 
             for (const b of tree.bodies) {
                 if (acceleratedObject !== b) {
@@ -58,10 +59,11 @@ export abstract class NBodyOctreeSystemUpdater {
 
             if (s / d < this.sdMaxRatio) { 
                 stats.composite += 1;
+                stats.total += 1;
                 acceleratedObject.addForce(force(r, d, com.mass, acceleratedObject.mass));
 
             } else {
-                stats.miss += 1;
+                
                 for (const child of tree.children!) {
                     this.accelerate(acceleratedObject, child, depth + 1);
                 }

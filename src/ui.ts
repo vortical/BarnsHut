@@ -1,5 +1,5 @@
 import GUI from "lil-gui";
-import { BodyScene, ParticleIntegrationMethod, ParticleIntegrationMethods, SceneOptionsState } from "./scene";
+import { BodyScene, SceneOptionsState } from "./scene";
 import LocationBar from "./LocationBar";
 import { throttle } from "./throttle";
 
@@ -36,6 +36,7 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
         sdRatio: bodyScene.getSdMaxRatio(),
         maxShownOctreeDepth: bodyScene.maxShownOctreeDepth,
         isOctreeShown: bodyScene.isOctreeShown,
+        octreeOpacity: bodyScene.octreeOpacity,
 
 
         clearStats() {
@@ -57,14 +58,17 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
     gui.add(options, "isOctreeShown",).name('Is Octree Shown')
         .onChange((v: boolean) => bodyScene.isOctreeShown = v);
 
-    gui.add(options, "maxShownOctreeDepth", 1, 15, 1).name('Max Shown Octree Depth')
+    gui.add(options, "maxShownOctreeDepth", 1, 16, 1).name('Max Shown Octree Depth')
         .onChange(throttle(50, this, (v: number) => bodyScene.maxShownOctreeDepth = v));
-
-    gui.add(options, "timescale", 1.0, 30, 1).name('Time Scale')
-        .onChange((v: number) => bodyScene.setTimeScale(v));
 
     gui.add(options, "octreeColorHue", 0, 1, 1.0 / 360.0).name('Octree Color Hue')
         .onChange((v: number) => bodyScene.octreeColorHue = v);
+
+    gui.add(options, "octreeOpacity", 0.05, 1.0, 0.05).name('Octree Opacity')
+        .onChange((v: number) => bodyScene.octreeOpacity = v);
+
+    gui.add(options, "timescale", 1.0, 30, 1).name('Time Scale')
+        .onChange((v: number) => bodyScene.setTimeScale(v));
 
     gui.add(options, "colorHue", 0, 1, 1.0 / 360.0).name('Particle Color Hue')
         .onChange((v: number) => bodyScene.colorHue = v);

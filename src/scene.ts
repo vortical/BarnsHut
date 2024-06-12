@@ -11,27 +11,36 @@ import { ParticleGraphics } from './ParticleGraphics';
 import { OctreeGraphics } from './OctreeGraphics';
 import { boxOf, octreeOf } from './octree';
 
-const CAMERA_NEAR = 5;
-const CAMERA_FAR = 50000000000000;
+const CAMERA_NEAR = 50;
+const CAMERA_FAR = 100000000000000;
 
 const defaultSceneProperties: Required<SceneOptionsState> = {
     fov: 35.5,
     colorHue: 0.5,
+    octreeColorHue: 0.11,
+    octreeOpacity: 0.25,
     date: Date.now(),
     nbParticles: 500,
-    sdRatio: 0.8,
+    sdRatio: 1.8,
     isOctreeShown: false,
-    maxShownOctreeDepth: 1
+    maxShownOctreeDepth: 4,
+    timeScale: 1,
+    fogDensity: 50,
+
 };
 
 export type SceneOptionsState = {
     fov?: number;
     colorHue?: number;
+    octreeColorHue?: number,
+    octreeOpacity?: number,
     date?: number;
     nbParticles?: number;
     sdRatio?: number;
     isOctreeShown?: boolean;
     maxShownOctreeDepth?:number;
+    timeScale?:number;
+    fogDensity?: number;
 };
 
 
@@ -63,7 +72,7 @@ export class BodyScene {
 
         this.sceneUpdater = sceneUpdater
         this.sceneUpdater.sdMaxRatio = options.sdRatio;
-        this.clock = new Clock(options.date);
+        this.clock = new Clock(options.date, options.timeScale);
         this.stats = new Stats();
         parentElement.appendChild(this.stats.dom);
         parentElement.appendChild(this.renderer.domElement);
@@ -72,7 +81,9 @@ export class BodyScene {
         this.scene.background = new Color( 0x0a0a0a );
         this.bodies = createBodies(options.nbParticles);
         this.particleGraphics = new ParticleGraphics(1, options.colorHue, this.bodies);
-        this.octreeGraphics = new OctreeGraphics(options.isOctreeShown);
+
+
+        this.octreeGraphics = new OctreeGraphics(options.isOctreeShown, options.maxShownOctreeDepth, options.octreeColorHue, options.octreeOpacity);
         this.scene.add(this.particleGraphics.points);
         this.scene.add(this.octreeGraphics.line);
         this.controls.update();
@@ -83,6 +94,13 @@ export class BodyScene {
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
     }
 
+    get octreeOpacity(): number {
+        return this.octreeGraphics.opacity;
+    }
+    set octreeOpacity(value: number) {
+        this.octreeGraphics.opacity = value;
+    }
+
     get colorHue(): number {
         return this.particleGraphics.colorHue;
     }
@@ -90,7 +108,7 @@ export class BodyScene {
     set colorHue(level: number) {
         this.particleGraphics.colorHue = level;
     }
-    
+
     get octreeColorHue(): number {
         return this.octreeGraphics.colorHue;
     }
@@ -169,11 +187,16 @@ export class BodyScene {
     getState(): SceneOptionsState {
         const options: SceneOptionsState = {};
         options.fov = this.getFov();
-        options.colorHue = this.getColorHue();
+        options.colorHue = this.colorHue;
         options.date = this.clock.getTime();
         options.nbParticles = this.getParticleCount();
         options.sdRatio = this.sceneUpdater.sdMaxRatio;
         options.isOctreeShown = this.isOctreeShown;
+        options.octreeOpacity = this.octreeOpacity;
+        options.octreeColorHue = this.octreeColorHue;
+        options.maxShownOctreeDepth = this.maxShownOctreeDepth;
+        options.timeScale = this.getTimeScale();
+
         return options;
     }
 
@@ -280,8 +303,9 @@ function createScene(): Scene {
     const scene = new Scene();
                                   // 5000000000
     // scene.fog = new Fog( 0x000000, 1, 25000000 );
-    scene.fog = new FogExp2( 0x000000, 0.0000000075 );
+    scene.fog = new FogExp2( 0x000000, 0.0000000000075 );
     scene.background = new Color('black');
+    
     return scene;
 }
 
