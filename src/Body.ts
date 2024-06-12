@@ -47,12 +47,15 @@ export class Body implements PositionedMass {
      * @param time increment
      * @returns vo + acc * time
      */
-    doVelocity(acc: V3, time: number): V3 {
-        return [
-            this.velocity[0] + acc[0] * time,
-            this.velocity[1] + acc[1] * time,
-            this.velocity[2] + acc[2] * time
-        ];
+    doVelocity(acc: V3, time: number, result: V3=[0,0,0]): V3 {
+        result[0] = this.velocity[0] + acc[0] * time;
+        result[1] = this.velocity[1] + acc[1] * time;
+        result[2] = this.velocity[2] + acc[2] * time;
+            // this.velocity[0] + acc[0] * time,
+            // this.velocity[1] + acc[1] * time,
+            // this.velocity[2] + acc[2] * time
+        // ];
+        return result;
     }
 
     /**
@@ -63,19 +66,31 @@ export class Body implements PositionedMass {
      * @param time 
      * @returns so + vo * t + a * (t * t)/2
     */
-    doPosition(acc: V3, time: number): V3 {
+    doPosition(acc: V3, time: number, result: V3=[0,0,0]): V3 {
         const time2 = (time * time) / 2;
-        return [
-            this.position[0] + (this.velocity[0] * time) + (acc[0] * time2),
-            this.position[1] + (this.velocity[1] * time) + (acc[1] * time2),
-            this.position[2] + (this.velocity[2] * time) + (acc[2] * time2),
-        ];
+
+        result[0] = this.position[0] + (this.velocity[0] * time) + (acc[0] * time2);
+        result[1] = this.position[1] + (this.velocity[1] * time) + (acc[1] * time2);
+        result[2] = this.position[2] + (this.velocity[2] * time) + (acc[2] * time2);
+        return result;
+
+        // return
+        //     this.position[0] + (this.velocity[0] * time) + (acc[0] * time2),
+        //     this.position[1] + (this.velocity[1] * time) + (acc[1] * time2),
+        //     this.position[2] + (this.velocity[2] * time) + (acc[2] * time2),
+        // ];
     }
 
     addForce(force: V3): V3 {
-        const acc = this.acceleration || [0, 0, 0];
-        this.acceleration = [acc[0] + (force[0] / this.mass), acc[1] + (force[1] / this.mass), acc[2] + (force[2] / this.mass)];
-        return this.acceleration;
+        if (this.acceleration == undefined){
+            this.acceleration = [0, 0, 0];
+        }
+        const acc = this.acceleration;
+
+        acc[0] = acc[0] + (force[0] / this.mass);
+        acc[1] =  acc[1] + (force[1] / this.mass), 
+        acc[2] = acc[2] + (force[2] / this.mass);
+        return acc;
     }
 
     /**
@@ -85,8 +100,8 @@ export class Body implements PositionedMass {
      * @returns 
      */
     updatePosition(time: number): V3 {
-        this.position = this.doPosition(this.acceleration!, time);
-        return this.position;
+        return this.doPosition(this.acceleration!, time, this.position);
+        // return this.position;
     }
 
 
@@ -97,7 +112,7 @@ export class Body implements PositionedMass {
      * @returns 
      */
     updateVelocity(time: number): V3 {
-        this.velocity = this.doVelocity(this.acceleration!, time);
+        this.doVelocity(this.acceleration!, time, this.velocity);
         return this.velocity;
     }
 

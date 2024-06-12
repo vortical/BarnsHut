@@ -8,33 +8,41 @@ import { Clock } from './Clock';
 import { throttle } from './throttle';
 import { NBodyOctreeSystemUpdater, LeapfrogNBodyOctreeSystemUpdater, EulerNBodyOctreeSystemUpdater } from './NBodyOctreeSceneUpdater';
 import { ParticleGraphics } from './ParticleGraphics';
+import { OctreeGraphics } from './OctreeGraphics';
+import { boxOf, octreeOf } from './octree';
 
-const CAMERA_NEAR = 500;
-const CAMERA_FAR = 500000000000;
+const CAMERA_NEAR = 50;
+const CAMERA_FAR = 100000000000000;
 
 const defaultSceneProperties: Required<SceneOptionsState> = {
     fov: 35.5,
     colorHue: 0.5,
+    octreeColorHue: 0.11,
+    octreeOpacity: 0.25,
     date: Date.now(),
     nbParticles: 500,
-    sdRatio: 0.8
+    sdRatio: 1.8,
+    isOctreeShown: false,
+    maxShownOctreeDepth: 4,
+    timeScale: 1,
+    fogDensity: 50,
+
 };
 
 export type SceneOptionsState = {
     fov?: number;
     colorHue?: number;
+    octreeColorHue?: number,
+    octreeOpacity?: number,
     date?: number;
     nbParticles?: number;
     sdRatio?: number;
+    isOctreeShown?: boolean;
+    maxShownOctreeDepth?:number;
+    timeScale?:number;
+    fogDensity?: number;
 };
 
-
-export const ParticleIntegrationMethods = {
-    euler: EulerNBodyOctreeSystemUpdater,
-    leapfrog: LeapfrogNBodyOctreeSystemUpdater,
-}
-
-export type ParticleIntegrationMethod = typeof ParticleIntegrationMethods[keyof typeof ParticleIntegrationMethods];
 
 
 /**
@@ -52,7 +60,7 @@ export class BodyScene {
     particleGraphics: ParticleGraphics;
     bodies: Body[];
     stats: Stats;
-    integrationMethod: ParticleIntegrationMethod
+    octreeGraphics: OctreeGraphics;
     
     constructor(parentElement: HTMLElement, sceneUpdater: NBodyOctreeSystemUpdater, stateOptions:SceneOptionsState){
         const options  = { ...defaultSceneProperties, ...stateOptions };        
@@ -64,7 +72,7 @@ export class BodyScene {
 
         this.sceneUpdater = sceneUpdater
         this.sceneUpdater.sdMaxRatio = options.sdRatio;
-        this.clock = new Clock(options.date);
+        this.clock = new Clock(options.date, options.timeScale);
         this.stats = new Stats();
         parentElement.appendChild(this.stats.dom);
         parentElement.appendChild(this.renderer.domElement);
@@ -73,32 +81,62 @@ export class BodyScene {
         this.scene.background = new Color( 0x0a0a0a );
         this.bodies = createBodies(options.nbParticles);
         this.particleGraphics = new ParticleGraphics(1, options.colorHue, this.bodies);
+
+
+        this.octreeGraphics = new OctreeGraphics(options.isOctreeShown, options.maxShownOctreeDepth, options.octreeColorHue, options.octreeOpacity);
         this.scene.add(this.particleGraphics.points);
+        this.scene.add(this.octreeGraphics.line);
         this.controls.update();
 
         this.setFOV(options.fov);
         this.setSize(canvasSize);
         this.setViewPosition([0, 0 , 10000000], [0,0,0])
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
-
-        this.integrationMethod = ParticleIntegrationMethods.euler;
     }
 
-
-    setParticleIntegrationMethod(integrationMethod: ParticleIntegrationMethod) {
-        this.integrationMethod = integrationMethod;
-        this.setSceneUpdater(new integrationMethod());
+    get octreeOpacity(): number {
+        return this.octreeGraphics.opacity;
+    }
+    set octreeOpacity(value: number) {
+        this.octreeGraphics.opacity = value;
     }
 
-    getParticleIntegrationMethod():ParticleIntegrationMethod{
-        return this.integrationMethod;
+    get colorHue(): number {
+        return this.particleGraphics.colorHue;
     }
 
-    setSceneUpdater(sceneUpdater: NBodyOctreeSystemUpdater){
-        const sdRatio =  this.sceneUpdater.sdMaxRatio;
-        this.sceneUpdater = sceneUpdater
-        this.sceneUpdater.sdMaxRatio = sdRatio;
+    set colorHue(level: number) {
+        this.particleGraphics.colorHue = level;
     }
+
+    get octreeColorHue(): number {
+        return this.octreeGraphics.colorHue;
+    }
+
+    set octreeColorHue(level: number) {
+        this.octreeGraphics.colorHue = level;
+    }
+
+    set maxShownOctreeDepth(value: number){
+        this.octreeGraphics.maxShownDepth = value;
+    }
+
+    get maxShownOctreeDepth(): number {
+        return this.octreeGraphics.maxShownDepth;
+    }
+
+    set isOctreeShown(value: boolean){
+        this.octreeGraphics.enabled = value;
+    }
+
+    get isOctreeShown(): boolean {
+        return this.octreeGraphics.enabled;
+    }
+
+    clearStats() {
+        this.sceneUpdater.clearStats();
+    }
+
 
     setViewPosition(cameraPosition: V3, target: V3) {
         this.controls.target.set(target[0], target[1], target[2]);
@@ -127,13 +165,7 @@ export class BodyScene {
         this.bodies = bodies;
     }
 
-    getColorHue(): number {
-        return this.particleGraphics.getColorHue();
-    }
 
-    setColorHue(level: number) {
-        this.particleGraphics.setColorHue(level);
-    }
 
     getFov(): number {
         return this.camera.getEffectiveFOV();
@@ -155,10 +187,16 @@ export class BodyScene {
     getState(): SceneOptionsState {
         const options: SceneOptionsState = {};
         options.fov = this.getFov();
-        options.colorHue = this.getColorHue();
+        options.colorHue = this.colorHue;
         options.date = this.clock.getTime();
         options.nbParticles = this.getParticleCount();
         options.sdRatio = this.sceneUpdater.sdMaxRatio;
+        options.isOctreeShown = this.isOctreeShown;
+        options.octreeOpacity = this.octreeOpacity;
+        options.octreeColorHue = this.octreeColorHue;
+        options.maxShownOctreeDepth = this.maxShownOctreeDepth;
+        options.timeScale = this.getTimeScale();
+
         return options;
     }
 
@@ -205,9 +243,13 @@ export class BodyScene {
      */
     tick(deltaTime: number) {
         return new Promise((resolve) => {
+            const octree = octreeOf(this.bodies, boxOf(this.bodies));
+
             const positionAttributeBuffer = this.particleGraphics.points.geometry.attributes.position;
-            this.sceneUpdater.update(positionAttributeBuffer.array, this.bodies, deltaTime);
+            this.sceneUpdater.update(octree, positionAttributeBuffer.array, this.bodies, deltaTime);
             positionAttributeBuffer.needsUpdate = true;
+
+            this.octreeGraphics.update(octree);
             resolve(null);
         });
     }
@@ -220,13 +262,30 @@ export class BodyScene {
 function createBodies(count: number): Body[] {
     const bodies = [];  
 
-    for ( let i = 0; i < count; i ++ ) {
+    const spread11 =  500000;
+    const spread12 =  2000000;
+    const spread21 = -2000000;
+    const spread22 = -500000;
+    const speed = 1000;
+    const speed2 = 2000;
+
+    const offset = 10
+    for ( let i = 0; i < count/2; i ++ ) {
         const mass = 1e20;
         const radius = 10e3;
-        const position: V3 = [MathUtils.randFloatSpread(2000000), MathUtils.randFloatSpread(2000000), MathUtils.randFloatSpread(2000000)];
-        const velocity: V3 =  [MathUtils.randFloatSpread( 1000 ), MathUtils.randFloatSpread( 1000 ),MathUtils.randFloatSpread( 1000 )];
+        const position: V3 = [MathUtils.randFloat(spread11, spread12), MathUtils.randFloat(spread11, spread12), MathUtils.randFloat(spread11, spread12)];
+        const velocity: V3 =  [MathUtils.randFloat(-speed2/2, -speed2 ), MathUtils.randFloat(-speed2/2, -speed2 ),MathUtils.randFloat(-speed2/6, -speed2/5 )];
         bodies.push(new Body(mass, radius, position, velocity));
     }
+
+    for ( let i = 0; i < count/2; i ++ ) {
+        const mass = 1e20;
+        const radius = 10e3;
+        const position: V3 = [MathUtils.randFloat(spread21, spread22), MathUtils.randFloat(spread21, spread22), MathUtils.randFloat(spread21, spread22)];
+        const velocity: V3 =  [MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/6, speed2/5 )];
+        bodies.push(new Body(mass, radius, position, velocity));
+    }
+
     return bodies;
 }
 
@@ -244,8 +303,9 @@ function createScene(): Scene {
     const scene = new Scene();
                                   // 5000000000
     // scene.fog = new Fog( 0x000000, 1, 25000000 );
-    scene.fog = new FogExp2( 0x000000, 0.000000075 );
+    scene.fog = new FogExp2( 0x000000, 0.0000000000075 );
     scene.background = new Color('black');
+    
     return scene;
 }
 

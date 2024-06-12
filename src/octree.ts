@@ -1,5 +1,5 @@
 import { PositionedMass, Body } from "./Body";
-import { Box, V3, centerOfMass } from "./geometry";
+import { Box, V3, abs, add, centerOfMass, divideScalar, substract } from "./geometry";
 
 const DIM = 15.0e12; // meters
 
@@ -12,6 +12,7 @@ export interface Octree {
     bodies: PositionedMass[];
     depth: number;
     count: number;
+    nodeCount: number;
 }
 
 export class OctreeLeaf implements Octree {
@@ -20,6 +21,7 @@ export class OctreeLeaf implements Octree {
     box: Box;
     centerOfMass: PositionedMass;
     count: number;
+    nodeCount = 1;
     depth = 1;
 
     constructor(bodies: PositionedMass[] = [], box: Box = new Box([-DIM, -DIM, -DIM], [DIM, DIM, DIM])) {
@@ -43,6 +45,7 @@ export class CompositeOctree implements Octree {
     centerOfMass: PositionedMass;
 
     _count?: number;
+    _nodeCount?: number;
     _depth?: number;
     _bodies?: PositionedMass[];
 
@@ -78,6 +81,14 @@ export class CompositeOctree implements Octree {
         return this._count;
     }
 
+    get nodeCount(): number {
+        if (this._nodeCount == undefined) {
+            // this._nodeCount = this.children.map(c => c.count).reduce((p, c) => p + c);
+            this._nodeCount = this.children.map(c => c.nodeCount).reduce((p, c) => p+c) + 1;
+        }
+        return this._nodeCount;    
+    }
+
     get depth(): number {
         if (this._depth == undefined) {
             this._depth = Math.max(...this.children.map(c => c.depth)) + 1;
@@ -106,10 +117,20 @@ export function boxOf(bodies: Body[] = []): Box {
         const maxV = acc.max;
         const position = item.position;
         if (!acc.contains(position)) {
-            return new Box(
-                [min(minV[0], position[0]), min(minV[1], position[1]), min(minV[2], position[2])],
-                [max(maxV[0], position[0]), max(maxV[1], position[1]), max(maxV[2], position[2])]
-            )
+
+            const newMin: V3 = [min(minV[0], position[0]), min(minV[1], position[1]), min(minV[2], position[2])];
+            const newMax: V3 = [max(maxV[0], position[0]), max(maxV[1], position[1]), max(maxV[2], position[2])];
+
+            // we use the biggest dim
+            const dim = abs(substract(newMax, newMin));
+            const maxComponent = max(...dim);
+            const center = divideScalar(add(newMax, newMin), 2);
+            return Box.centeredBox(center, maxComponent);
+
+            // return new Box(
+            //     [min(minV[0], position[0]), min(minV[1], position[1]), min(minV[2], position[2])],
+            //     [max(maxV[0], position[0]), max(maxV[1], position[1]), max(maxV[2], position[2])]
+            // )
         }
         return acc;
     }, new Box([0, 0, 0], [0, 0, 0]));
@@ -136,6 +157,7 @@ export function octreeOf(bodies: Body[] | PositionedMass[] = [], box: Box, depth
         return Array.from(octantBodyMap, ([index, bodies]) => octreeOf(bodies, octantBoxMap.get(index)!, depth + 1));
     }
 
+    // if (bodies.length <= 1 || depth > 15) {
     if (bodies.length <= 1 || depth > 40) {
         return new OctreeLeaf(bodies, box);
     }
@@ -145,7 +167,7 @@ export function octreeOf(bodies: Body[] | PositionedMass[] = [], box: Box, depth
 
 export type OctantCoordinates = [0 | 1, 0 | 1, 0 | 1];
 
-export type OctantIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type OctantIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export const OctantIndexToOctantCoords: OctantCoordinates[] = [
     [0, 0, 0],
