@@ -243,7 +243,7 @@ export class BodyScene {
      */
     tick(deltaTime: number) {
         return new Promise((resolve) => {
-            const octree = octreeOf(this.bodies, boxOf(this.bodies));
+            const octree = octreeOf(this.bodies);
 
             const positionAttributeBuffer = this.particleGraphics.points.geometry.attributes.position;
             this.sceneUpdater.update(octree, positionAttributeBuffer.array, this.bodies, deltaTime);
@@ -267,14 +267,14 @@ function createBodies(count: number): Body[] {
     const spread21 = -2000000;
     const spread22 = -500000;
     const speed = 1000;
-    const speed2 = 2000;
+    const speed2 = 1000;
 
     const offset = 10
     for ( let i = 0; i < count/2; i ++ ) {
         const mass = 1e20;
         const radius = 10e3;
         const position: V3 = [MathUtils.randFloat(spread11, spread12), MathUtils.randFloat(spread11, spread12), MathUtils.randFloat(spread11, spread12)];
-        const velocity: V3 =  [MathUtils.randFloat(-speed2/2, -speed2 ), MathUtils.randFloat(-speed2/2, -speed2 ),MathUtils.randFloat(-speed2/6, -speed2/5 )];
+        const velocity: V3 =  [MathUtils.randFloat(-speed2/2, -speed2 ), MathUtils.randFloat(-speed2/2, -speed2 ),MathUtils.randFloat(-speed2/4, -speed2/2 )];
         bodies.push(new Body(mass, radius, position, velocity));
     }
 
@@ -282,7 +282,7 @@ function createBodies(count: number): Body[] {
         const mass = 1e20;
         const radius = 10e3;
         const position: V3 = [MathUtils.randFloat(spread21, spread22), MathUtils.randFloat(spread21, spread22), MathUtils.randFloat(spread21, spread22)];
-        const velocity: V3 =  [MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/6, speed2/5 )];
+        const velocity: V3 =  [MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/4, speed2/2 )];
         bodies.push(new Body(mass, radius, position, velocity));
     }
 
@@ -303,7 +303,7 @@ function createScene(): Scene {
     const scene = new Scene();
                                   // 5000000000
     // scene.fog = new Fog( 0x000000, 1, 25000000 );
-    scene.fog = new FogExp2( 0x000000, 0.0000000000075 );
+    scene.fog = new FogExp2( 0x000000, 0.00000000075 );
     scene.background = new Color('black');
     
     return scene;

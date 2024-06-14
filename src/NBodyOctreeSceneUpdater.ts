@@ -136,17 +136,17 @@ export class LeapfrogNBodyOctreeSystemUpdater extends NBodyOctreeSystemUpdater {
     }
 }
 
-// export class EulerNBodyOctreeSystemUpdater extends NBodyOctreeSystemUpdater {
-//     constructor(sdMaxRatio: number = 0.8) {
-//         super(sdMaxRatio);
-//     }
+export class EulerNBodyOctreeSystemUpdater extends NBodyOctreeSystemUpdater {
+    constructor(sdMaxRatio: number = 0.8) {
+        super(sdMaxRatio);
+    }
 
-//     updateBodiesState(bodies: Body[], octree: Octree, timestep: number): void {
-//         for (const b of bodies) {
-//             b.acceleration = [0, 0, 0]
-//             this.accelerate(b, octree);
-//             b.updatePosition(timestep);
-//             b.updateVelocity(timestep);
-//         }
-//     }
-// }
+    updateBodiesState(bodies: Body[], octree: Octree, timestep: number): void {
+        for (const b of bodies) {
+            b.acceleration = [0, 0, 0]
+            this.accelerate(b, octree);
+            b.updatePosition(timestep);
+            b.updateVelocity(timestep);
+        }
+    }
+}

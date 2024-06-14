@@ -69,7 +69,7 @@ export class OctreeGraphics {
          * @param octree 
          * @param positionsAttribute 
          * @param index is a counter for index within positionsAttribute
-         * @param depth current level of the octree root.
+         * @param depth current level down from octree root.
          * @returns updated index count. I.e. index is increased by 6 per each shown octant: 3 segments each with 2 vertices.
          */
 
@@ -99,7 +99,6 @@ export class OctreeGraphics {
                 }
             }
             return index;
-
         }
 
         const positionAttributeBuffer: BufferAttribute = this.line.geometry.getAttribute('position') as BufferAttribute;
@@ -108,19 +107,6 @@ export class OctreeGraphics {
         positionAttributeBuffer.needsUpdate = true;
         this.line.geometry.computeBoundingSphere();
     }
-
-
-
-
-
-    // setColorHue(colorHue: number) {
-    //     this.colorHue = colorHue;
-    //     this.material.color.setHSL(colorHue, 0.8, 0.5, SRGBColorSpace);
-    // }
-
-    // getColorHue(): number {
-    //     return this.colorHue;
-    // }
 }
 
 

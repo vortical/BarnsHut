@@ -1,6 +1,7 @@
-import { BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, SRGBColorSpace, TextureLoader } from 'three';
+import { BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, SRGBColorSpace } from 'three';
 import { PositionedMass } from './Body';
-import { BoxLineGeometry } from 'three/examples/jsm/Addons.js';
+import { textureLoader } from './textureLoader';
+
 
 
 
@@ -11,10 +12,11 @@ export class ParticleGraphics {
     points: Points;
     material: PointsMaterial;
     _colorHue!: number;
+    _unitSize: number = 5000; // wip: we can use this to scale the display 
 
     constructor(nbSizes: number = 1, colorHue: number, bodies: PositionedMass[]) {
-        const textureLoader = new TextureLoader();
-        const circle = textureLoader.load('/public/assets/disc.png', texture => texture.colorSpace = SRGBColorSpace);
+        // const textureLoader = new TextureLoader();
+        const circle = textureLoader.load('/assets/disc.png', texture => texture.colorSpace = SRGBColorSpace);
         const geometry = new BufferGeometry();
         this.material = new PointsMaterial({ size: 50000, sizeAttenuation: true, map: circle, alphaTest: 0.5, transparent: true });
         const points = new Points(geometry, this.material);
@@ -35,5 +37,13 @@ export class ParticleGraphics {
 
     get colorHue(): number {
         return this._colorHue;
+    }
+
+    set avgParticleSizeScale(value: number) {
+        this.material.size = this._unitSize * value;
+    }
+
+    get avgParticleSizeScale(): number {
+        return this.material.size / this._unitSize;
     }
 }
