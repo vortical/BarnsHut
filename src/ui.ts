@@ -67,7 +67,7 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
     gui.add(options, "octreeOpacity", 0.05, 1.0, 0.05).name('Octree Opacity')
         .onChange((v: number) => bodyScene.octreeOpacity = v);
 
-    gui.add(options, "timescale", 1.0, 30, 1).name('Time Scale')
+    gui.add(options, "timescale", 0.1, 30, 0.1).name('Time Scale')
         .onChange((v: number) => bodyScene.setTimeScale(v));
 
     gui.add(options, "colorHue", 0, 1, 1.0 / 360.0).name('Particle Color Hue')

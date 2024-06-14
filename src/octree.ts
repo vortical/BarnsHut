@@ -2,16 +2,55 @@ import { PositionedMass, Body } from "./Body";
 import { Box, V3, abs, add, centerOfMass, divideScalar, substract } from "./geometry";
 
 const DIM = 15.0e12; // meters
+const MAX_DEPTH = 40;
 
+
+/**
+ * Given an array of bodies. Return an octree. This is the main way of building octrees.
+ * 
+ * If there is less that two bodies or if maximum depth is reached: return OctreeLeaf
+ * If there are more than one body, then divide the box into 8 smaller octrees (2x2x2) recursively until an octree contains only leaf nodes.
+ * 
+ * @param bodies 
+ * @param box 
+ * @param sparse 
+ * @param depth 
+ * @returns 
+ */
+export function octreeOf(bodies: Body[] | PositionedMass[] = [], box: Box = boxOf(bodies), depth: number = 1): Octree {
+
+    function divide(bodies: Body[] | PositionedMass[], box: Box, depth: number): Octree[] {
+        const octantBodyMap = groupBodiesByOctantIndex(bodies, box.median);
+        const octantBoxMap = divideOctantBox(box);
+        return Array.from(octantBodyMap, ([index, bodies]) => octreeOf(bodies, octantBoxMap.get(index)!, depth + 1));
+    }
+
+    if (bodies.length <= 1 || depth > MAX_DEPTH) {
+        return new OctreeLeaf(bodies, box);
+    }
+    return new CompositeOctree(divide(bodies, box, depth), box);
+}
 
 export interface Octree {
-    parent?: Octree;
+    parent?: Octree;    
     children?: Octree[];
-    box: Box;
+    box: Box;    
     centerOfMass: PositionedMass;
+    /**
+     * Bodies within this octree
+     */    
     bodies: PositionedMass[];
+    /**
+     * Depth of this octree
+     */    
     depth: number;
+    /**
+     * Count of bodies under a node. 
+     */
     count: number;
+    /**
+     * Count of nodes in this octree 
+     */    
     nodeCount: number;
 }
 
@@ -58,8 +97,7 @@ export class CompositeOctree implements Octree {
     }
 
     /**
-     * Note: not used, only here for consistency as we only need center of mass in a composite.
-     * We only use bodies under a LeafOctree, .
+     * Bodies within this octree
      */
     get bodies(): PositionedMass[] {
         if (this._bodies == undefined) {
@@ -69,26 +107,28 @@ export class CompositeOctree implements Octree {
     }
 
     /**
-     * 
-     * Only count the bodies under a node. 
-     * Don't count the nodes.
-     * */
+     * Count of bodies under a node. 
+     */
     get count(): number {
         if (this._count == undefined) {
             this._count = this.children.map(c => c.count).reduce((p, c) => p + c);
-            // this._count = this.children.map(c => c.count()).reduce((p, c) => p+c) + 1;
         }
         return this._count;
     }
 
+    /**
+     * Count of nodes in this octree 
+     */
     get nodeCount(): number {
         if (this._nodeCount == undefined) {
-            // this._nodeCount = this.children.map(c => c.count).reduce((p, c) => p + c);
             this._nodeCount = this.children.map(c => c.nodeCount).reduce((p, c) => p+c) + 1;
         }
         return this._nodeCount;    
     }
 
+    /**
+     * Depth of this octree
+     */
     get depth(): number {
         if (this._depth == undefined) {
             this._depth = Math.max(...this.children.map(c => c.depth)) + 1;
@@ -103,16 +143,16 @@ export class CompositeOctree implements Octree {
 
 
 /**
- * Return a box which can encompass all bodies
+ * Return a cube which can encompass all bodies
  * 
  * @param bodies 
  * @returns Box
  */
-export function boxOf(bodies: Body[] = []): Box {
+export function boxOf(bodies: PositionedMass[]  = []): Box {
     const min = Math.min;
     const max = Math.max;
 
-    return bodies.reduce((acc: Box, item: Body) => {
+    return bodies.reduce((acc: Box, item: PositionedMass) => {
         const minV = acc.min;
         const maxV = acc.max;
         const position = item.position;
@@ -121,48 +161,16 @@ export function boxOf(bodies: Body[] = []): Box {
             const newMin: V3 = [min(minV[0], position[0]), min(minV[1], position[1]), min(minV[2], position[2])];
             const newMax: V3 = [max(maxV[0], position[0]), max(maxV[1], position[1]), max(maxV[2], position[2])];
 
-            // we use the biggest dim
+            // we use the biggest dim for the cube
             const dim = abs(substract(newMax, newMin));
             const maxComponent = max(...dim);
             const center = divideScalar(add(newMax, newMin), 2);
-            return Box.centeredBox(center, maxComponent);
-
-            // return new Box(
-            //     [min(minV[0], position[0]), min(minV[1], position[1]), min(minV[2], position[2])],
-            //     [max(maxV[0], position[0]), max(maxV[1], position[1]), max(maxV[2], position[2])]
-            // )
+            return Box.centeredCube(center, maxComponent);
         }
         return acc;
     }, new Box([0, 0, 0], [0, 0, 0]));
 }
 
-/**
- * Given an array of bodies. Return an octree. This is the principal way of building octrees.
- * 
- * If there is only a single body: return OctreeLeaf
- * If there are more than one body, then divide the box into 8 smaller octrees (2x2x2) recursively until an octree contains only leaf nodes.
- * 
- * @param bodies 
- * @param box 
- * @param sparse 
- * @param depth 
- * @returns 
- */
-export function octreeOf(bodies: Body[] | PositionedMass[] = [], box: Box, depth: number = 1): Octree {
-
-    function divide(bodies: Body[] | PositionedMass[], box: Box, depth: number): Octree[] {
-        const octantBodyMap = groupBodiesByOctantIndex(bodies, box.median);
-        const octantBoxMap = divideOctantBox(box);
-
-        return Array.from(octantBodyMap, ([index, bodies]) => octreeOf(bodies, octantBoxMap.get(index)!, depth + 1));
-    }
-
-    // if (bodies.length <= 1 || depth > 15) {
-    if (bodies.length <= 1 || depth > 40) {
-        return new OctreeLeaf(bodies, box);
-    }
-    return new CompositeOctree(divide(bodies, box, depth), box);
-}
 
 
 export type OctantCoordinates = [0 | 1, 0 | 1, 0 | 1];

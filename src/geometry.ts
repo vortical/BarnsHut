@@ -137,14 +137,13 @@ export class Box {
     this.maxDimension = Math.max(...this.dimensions);
   }
 
-  static centeredBox(center: V3, size: number){
+  static centeredCube(center: V3, size: number): Box {
     const halfSize = size/2;
     const min: V3 = [center[0] - halfSize, center[1] - halfSize, center[2] - halfSize ];
     const max: V3 = [center[0] + halfSize, center[1] + halfSize, center[2] + halfSize ];
-
     return new Box(min, max);
-
   }
+
   contains(position: V3) {
     const min = this.min;
     // max boundary is excluded
