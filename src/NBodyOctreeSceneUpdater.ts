@@ -6,15 +6,13 @@ import { Box, V3, abs, add, centerOfMass, divideScalar, magnitude, substract } f
 import { PositionedMass } from "./Body.ts";
 import { Octree, OctreeLeaf, boxOf, octreeOf } from "./octree.ts";
 
-const DIM = 15.0e12; // meters
-const DEFAULT_SD_MAX_RATIO = 1.00;
-// const SD_MAX_RATIO = 0.1;
+
 const stats = {
     leaf: 0,
     composite: 0,
-    miss: 0,
-    empty: 0,
-    total:0
+    total: 0,
+    nodes:0,
+    depth:0,
 };
 
 
@@ -23,30 +21,38 @@ export abstract class NBodyOctreeSystemUpdater {
     isOneTimeUpdate = false;
     isEnabled = true;
     sdMaxRatio: number;
+    octree?: Octree;
 
 
-    constructor(sdMaxRatio: number = 0.8){
-        this.sdMaxRatio=sdMaxRatio;
+    constructor(sdMaxRatio: number = 0.8) {
+        this.sdMaxRatio = sdMaxRatio;
     }
 
-    clearStats(){
+    clearStats() {
         stats.leaf = 0;
         stats.composite = 0;
-        stats.miss = 0;
-        stats.total = 0;0
-         
+        stats.total = 0; 
+
+    }
+
+    getStats() {
+        if (this.octree !== undefined){
+            stats.nodes = this.octree.nodeCount;
+            stats.depth = this.octree.depth; 
+
+        }
+        return stats;
     }
 
     accelerate(acceleratedObject: Body, tree: Octree, depth: number = 1) {
 
-        
-
         if (tree.children == undefined) {// : slow: instanceof OctreeLeaf){
-            stats.leaf += 1;
-            stats.total += 1;
+
 
             for (const b of tree.bodies) {
                 if (acceleratedObject !== b) {
+                    stats.leaf += 1;
+                    stats.total += 1;
                     acceleratedObject.addForceFromBody(b);
                 }
             }
@@ -57,13 +63,13 @@ export abstract class NBodyOctreeSystemUpdater {
             const r = substract(com.position, acceleratedObject.position);
             const d = magnitude(r);
 
-            if (s / d < this.sdMaxRatio) { 
+            if (s / d < this.sdMaxRatio) {
                 stats.composite += 1;
                 stats.total += 1;
                 acceleratedObject.addForce(force(r, d, com.mass, acceleratedObject.mass));
 
             } else {
-                
+
                 for (const child of tree.children!) {
                     this.accelerate(acceleratedObject, child, depth + 1);
                 }
@@ -74,13 +80,15 @@ export abstract class NBodyOctreeSystemUpdater {
 
     abstract updateBodiesState(bodies: Body[], octree: Octree, timestep: number): void;
 
-    
+
 
 
     update(octree: Octree, particlePositions: TypedArray, bodies: Body[], timestepMs: number) {
         // const octree = octreeOf(bodies, boxOf(bodies));
+        this.octree = octree;
+
         this.updateBodiesState(bodies, octree, timestepMs / 1000.0);
-        console.log(octree.nodeCount +" "+octree.depth);
+        // console.log(octree.nodeCount + " " + octree.depth);
 
         for (let i = 0, length = bodies.length; i < length; i++) {
             const position = bodies[i].position;
@@ -103,22 +111,22 @@ export class LeapfrogNBodyOctreeSystemUpdater extends NBodyOctreeSystemUpdater {
     }
 
     updateBodiesState(bodies: Body[], octree: Octree, timestep: number): void {
-    
+
 
         // Pi+1 = F(Pi, Ai)
         for (const b of bodies) {
-            if(b.acceleration == undefined){
+            if (b.acceleration == undefined) {
                 this.accelerate(b, octree);
             }
             b.updatePosition(timestep);
         }
-        
+
         // Vi+1 = F(Vi, Ai, Ai+1)
         for (const b of bodies) {
             const acceleration = b.acceleration!;
 
             // following updated positions i+1, get A(i+1)
-            b.acceleration = [0,0,0];
+            b.acceleration = [0, 0, 0];
             this.accelerate(b, octree);
             const nextAcceleration = b.acceleration!;
 
@@ -128,11 +136,11 @@ export class LeapfrogNBodyOctreeSystemUpdater extends NBodyOctreeSystemUpdater {
 
             // set A(i+1)
             b.acceleration = nextAcceleration;
-        
+
 
         }
 
-        console.log(stats.total+"comp:" + stats.composite/stats.total +", leaf:"+stats.leaf/stats.total +", miss:"+stats.miss/stats.total)
+        
     }
 }
 
