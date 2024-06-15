@@ -12,6 +12,7 @@ export class SimpleUI {
     constructor(bodyScene: BodyScene, locationBar: LocationBar<SceneOptionsState>) {
 
         buildLilGui(bodyScene, locationBar);
+        setupStatsPanel(bodyScene);
 
 
         // // Handle the history back button
@@ -22,6 +23,31 @@ export class SimpleUI {
         });
 
     }
+}
+
+/**
+ * Display status from the scene every seconde
+ * 
+ * @param scene 
+ */
+function setupStatsPanel(scene: BodyScene){
+    const leafHitElement: HTMLLIElement = document.querySelector<HTMLLIElement>('#octree-leaf-hits')!;
+    const compositeHitElement: HTMLLIElement = document.querySelector<HTMLLIElement>('#octree-composite-hits')!;
+    const nodesElement: HTMLLIElement = document.querySelector<HTMLLIElement>('#octree-nodes')!;
+    const depthElement: HTMLLIElement = document.querySelector<HTMLLIElement>('#octree-depth')!;
+ 
+    function flashStats(){
+        const stats = scene.updaterStats;
+
+        const compHits =  (stats.composite / stats.total*100).toFixed(1);
+        const leafHits =  (stats.leaf / stats.total*100).toFixed(1);
+
+        leafHitElement.textContent = `Composite Hits: ${compHits}%`;
+        compositeHitElement.textContent = `Leaf Hits: ${leafHits}%`;
+        nodesElement.textContent = `Octree Nodes: ${stats.nodes}`;
+        depthElement.textContent = `Octree Depth: ${stats.depth}`;
+    }
+    setInterval(flashStats, 1000);
 }
 
 function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptionsState>): GUI {
@@ -40,7 +66,7 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
 
 
         clearStats() {
-            bodyScene.clearStats();
+            bodyScene.clearUpdaterStats();
         },
         pushState() {
             const state = bodyScene.getState();
@@ -90,3 +116,5 @@ function buildLilGui(bodyScene: BodyScene, locationBar: LocationBar<SceneOptions
 
     return gui;
 }
+
+

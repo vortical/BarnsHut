@@ -1,6 +1,6 @@
 import { Camera, Color, Fog, FogExp2, MathUtils,PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
-import { ArcballControls } from 'three/examples/jsm/Addons.js';
+import { TrackballControls } from 'three/examples/jsm/Addons.js';
 
 import { Dim, V3 } from './geometry';
 import { Body } from './Body';
@@ -15,15 +15,15 @@ const CAMERA_NEAR = 50;
 const CAMERA_FAR = 100000000000000;
 
 const defaultSceneProperties: Required<SceneOptionsState> = {
-    fov: 35.5,
+    fov: 30.0,
     colorHue: 0.5,
     octreeColorHue: 0.11,
     octreeOpacity: 0.25,
     date: Date.now(),
-    nbParticles: 500,
+    nbParticles: 1200,
     sdRatio: 1.8,
-    isOctreeShown: false,
-    maxShownOctreeDepth: 4,
+    isOctreeShown: true,
+    maxShownOctreeDepth: 16,
     timeScale: 1,
     fogDensity: 50,
 
@@ -52,7 +52,7 @@ export class BodyScene {
     camera: PerspectiveCamera;
     scene: Scene;
     renderer: WebGLRenderer;
-    controls: ArcballControls;
+    controls: TrackballControls;
     parentElement: HTMLElement;
     size!: Dim;
     clock: Clock;
@@ -94,6 +94,10 @@ export class BodyScene {
         setupResizeHandlers(parentElement, (size: Dim) => this.setSize(size));
     }
 
+    get updaterStats() {
+        return this.sceneUpdater.getStats();
+
+    }
     get octreeOpacity(): number {
         return this.octreeGraphics.opacity;
     }
@@ -133,7 +137,7 @@ export class BodyScene {
         return this.octreeGraphics.enabled;
     }
 
-    clearStats() {
+    clearUpdaterStats() {
         this.sceneUpdater.clearStats();
     }
 
@@ -262,19 +266,19 @@ export class BodyScene {
 function createBodies(count: number): Body[] {
     const bodies = [];  
 
-    const spread11 =  500000;
+    const spread11 =  300000;
     const spread12 =  2000000;
     const spread21 = -2000000;
-    const spread22 = -500000;
+    const spread22 = -300000;
     const speed = 1000;
-    const speed2 = 1000;
+    const speed2 = 1900;
 
     const offset = 10
     for ( let i = 0; i < count/2; i ++ ) {
         const mass = 1e20;
         const radius = 10e3;
         const position: V3 = [MathUtils.randFloat(spread11, spread12), MathUtils.randFloat(spread11, spread12), MathUtils.randFloat(spread11, spread12)];
-        const velocity: V3 =  [MathUtils.randFloat(-speed2/2, -speed2 ), MathUtils.randFloat(-speed2/2, -speed2 ),MathUtils.randFloat(-speed2/4, -speed2/2 )];
+        const velocity: V3 =  [MathUtils.randFloat(-speed2/2, -speed2 ), MathUtils.randFloat(-speed2/2, -speed2 ),MathUtils.randFloat(-speed2/5, -speed2/3 )];
         bodies.push(new Body(mass, radius, position, velocity));
     }
 
@@ -282,7 +286,7 @@ function createBodies(count: number): Body[] {
         const mass = 1e20;
         const radius = 10e3;
         const position: V3 = [MathUtils.randFloat(spread21, spread22), MathUtils.randFloat(spread21, spread22), MathUtils.randFloat(spread21, spread22)];
-        const velocity: V3 =  [MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/4, speed2/2 )];
+        const velocity: V3 =  [MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/2, speed2 ), MathUtils.randFloat(speed2/5, speed2/3 )];
         bodies.push(new Body(mass, radius, position, velocity));
     }
 
@@ -318,11 +322,14 @@ function createRenderer(): WebGLRenderer {
     return renderer
 }
 
-function createControls(camera: Camera, domElement: HTMLElement): ArcballControls {
+function createControls(camera: Camera, domElement: HTMLElement): TrackballControls {
     // const controls = new OrbitControls(camera, domElement);
-    const controls = new ArcballControls(camera, domElement);
+    const controls = new TrackballControls(camera, domElement);
+    controls.rotateSpeed = 1.0;
+    controls.zoomSpeed = 0.5;
+    controls.panSpeed = 0.3;
 
-    // controls.enableDamping = true;
+    controls.keys = [ 'KeyA', 'KeyS', 'KeyD' ];
     return controls;
 }
 
